@@ -1,0 +1,1130 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html {
+    font-family: Inter, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif;
+  }
+  
+  body {
+    background-color: #f8fafc;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-200 text-secondary-800 hover:bg-secondary-300 focus:ring-secondary-500;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+  
+  .input {
+    @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+  
+  .textarea {
+    @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none;
+  }
+  
+  .select {
+    @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-secondary-200 p-6;
+  }
+  
+  .task-card {
+    @apply bg-white rounded-lg shadow-sm border border-secondary-200 p-4 hover:shadow-md transition-shadow duration-200;
+  }
+  
+  /* Sticky Note Styles with natural curl */
+  .sticky-note {
+    @apply relative w-full max-w-sm;
+    min-height: 280px;
+    padding: 16px;
+    margin: 8px;
+    border-radius: 3px;
+    /* Multi-layered realistic shadow system */
+    box-shadow: 
+      /* Contact shadow - very close to wall */
+      0 1px 2px rgba(0, 0, 0, 0.15),
+      /* Main shadow - slightly lifted */
+      0 3px 6px rgba(0, 0, 0, 0.12),
+      /* Ambient shadow - softer, larger */
+      0 8px 20px rgba(0, 0, 0, 0.08),
+      /* Edge highlights for paper effect */
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 1px 0 0 rgba(255, 255, 255, 0.2),
+      inset -1px 0 0 rgba(0, 0, 0, 0.03),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+    cursor: pointer;
+    /* Paper-like surface with natural curl */
+    position: relative;
+    perspective: 800px;
+    transform-style: preserve-3d;
+    /* Add micro bounce on load with realistic physics */
+    animation: paper-entry 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  .sticky-note:hover {
+    transform: translateY(-4px) scale(1.02) rotate(var(--rotation, 0deg));
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.15),
+      0 8px 16px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 1px 0 0 rgba(255, 255, 255, 0.2),
+      inset -1px 0 0 rgba(0, 0, 0, 0.03),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .sticky-note-header {
+    @apply mb-4;
+    min-height: 120px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .sticky-note-footer {
+    @apply mt-4;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Realistic Post-it color palette */
+  .sticky-note.priority-high {
+    /* Classic canary yellow - high priority */
+    background: linear-gradient(145deg, 
+      #ffeb3b 0%,     /* Top left - bright yellow */
+      #fff176 25%,    /* Slight variation */
+      #ffee58 50%,    /* Center */
+      #fdd835 75%,    /* Slightly darker */
+      #f9a825 100%    /* Bottom right - aged yellow */
+    );
+    border: 1px solid #f57f17;
+    color: #3e2723;
+  }
+  
+  .sticky-note.priority-medium {
+    /* Post-it orange - medium priority */
+    background: linear-gradient(145deg,
+      #ffb74d 0%,     /* Light orange */
+      #ffa726 25%,    /* Standard orange */
+      #ff9800 50%,    /* Pure orange */
+      #fb8c00 75%,    /* Deeper orange */
+      #ef6c00 100%    /* Dark orange */
+    );
+    border: 1px solid #e65100;
+    color: #3e2723;
+  }
+  
+  .sticky-note.priority-low {
+    /* Post-it lime green - low priority */
+    background: linear-gradient(145deg,
+      #c5e1a5 0%,     /* Light lime */
+      #aed581 25%,    /* Standard lime */
+      #9ccc65 50%,    /* Pure lime */
+      #8bc34a 75%,    /* Deeper lime */
+      #689f38 100%    /* Dark lime */
+    );
+    border: 1px solid #558b2f;
+    color: #1b5e20;
+  }
+  
+  /* Default color for tasks without priority */
+  .sticky-note:not(.priority-high):not(.priority-medium):not(.priority-low) {
+    /* Classic canary yellow as default */
+    background: linear-gradient(145deg, 
+      #ffeb3b 0%, #fff176 25%, #ffee58 50%, #fdd835 75%, #f9a825 100%
+    );
+    border: 1px solid #f57f17;
+    color: #3e2723;
+  }
+  
+  /* Status-based effects */
+  .sticky-note.status-completed {
+    opacity: 0.7;
+    filter: grayscale(0.3);
+  }
+  
+  .sticky-note.status-completed::after {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: #22c55e;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  .sticky-note.status-postponed {
+    opacity: 0.6;
+    transform: rotate(-2deg);
+  }
+  
+  .sticky-note.status-inProgress {
+    animation: pulse 2s ease-in-out infinite;
+  }
+  
+  .sticky-note.dragging {
+    opacity: 0.8;
+    transform: rotate(5deg) scale(1.05);
+    z-index: 50;
+    cursor: grabbing;
+  }
+  
+  /* Physical creases, wrinkles and natural curl variations */
+  .sticky-note:nth-child(6n+1) {
+    transform: rotate(1.2deg) perspective(600px) rotateX(0.8deg) rotateY(-0.5deg);
+    border-radius: 3px 4px 3px 2px;
+    clip-path: polygon(
+      0% 0%, 
+      98% 0%, 
+      99.5% 4%, 
+      100% 8%, 
+      100% 95%, 
+      98% 100%, 
+      2% 100%, 
+      0% 96%
+    );
+  }
+  
+  .sticky-note:nth-child(6n+2) {
+    transform: rotate(-0.8deg) perspective(700px) rotateX(-0.6deg) rotateY(0.7deg);
+    border-radius: 2px 3px 4px 3px;
+    clip-path: polygon(
+      1% 0%, 
+      100% 0%, 
+      100% 94%, 
+      99% 98%, 
+      96% 100%, 
+      0% 100%, 
+      0% 5%, 
+      0.5% 1%
+    );
+  }
+  
+  .sticky-note:nth-child(6n+3) {
+    transform: rotate(1.8deg) perspective(650px) rotateX(1.2deg) rotateY(-0.8deg);
+    border-radius: 4px 2px 3px 4px;
+    clip-path: polygon(
+      0% 2%, 
+      97% 0%, 
+      100% 3%, 
+      100% 100%, 
+      3% 100%, 
+      0% 97%
+    );
+  }
+  
+  .sticky-note:nth-child(6n+4) {
+    transform: rotate(-1.3deg) perspective(750px) rotateX(-0.9deg) rotateY(0.4deg);
+    border-radius: 3px 3px 2px 4px;
+    clip-path: polygon(
+      0% 0%, 
+      99% 0%, 
+      100% 6%, 
+      100% 100%, 
+      1% 100%, 
+      0% 98%, 
+      0% 3%
+    );
+  }
+  
+  .sticky-note:nth-child(6n+5) {
+    transform: rotate(0.7deg) perspective(580px) rotateX(0.5deg) rotateY(-1deg);
+    border-radius: 2px 4px 3px 3px;
+    clip-path: polygon(
+      2% 0%, 
+      100% 0%, 
+      100% 95%, 
+      98% 100%, 
+      0% 100%, 
+      0% 4%
+    );
+  }
+  
+  .sticky-note:nth-child(6n) {
+    transform: rotate(-1.6deg) perspective(680px) rotateX(-1.1deg) rotateY(0.6deg);
+    border-radius: 4px 3px 2px 3px;
+    clip-path: polygon(
+      0% 0%, 
+      98% 0%, 
+      100% 2%, 
+      100% 98%, 
+      97% 100%, 
+      2% 100%, 
+      0% 97%
+    );
+  }
+  
+  /* Additional curling for edge variations */
+  .sticky-note:nth-child(8n+1) {
+    transform: rotate(1.2deg) perspective(600px) rotateX(0.8deg) rotateY(-0.5deg) rotateZ(0.2deg);
+  }
+  
+  .sticky-note:nth-child(8n+3) {
+    transform: rotate(-0.9deg) perspective(720px) rotateX(-0.7deg) rotateY(0.9deg) rotateZ(-0.3deg);
+  }
+  
+  .sticky-note:nth-child(8n+5) {
+    transform: rotate(1.5deg) perspective(640px) rotateX(1deg) rotateY(-0.7deg) rotateZ(0.4deg);
+  }
+  
+  .sticky-note:nth-child(8n+7) {
+    transform: rotate(-1.1deg) perspective(710px) rotateX(-0.8deg) rotateY(0.5deg) rotateZ(-0.2deg);
+  }
+  
+  /* Folded corner effects */
+  .sticky-note:nth-child(7n+2)::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 15px;
+    height: 15px;
+    background: linear-gradient(
+      -45deg,
+      transparent 46%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.05) 54%,
+      transparent 58%
+    );
+    transform: rotate(45deg);
+    z-index: 2;
+  }
+  
+  .sticky-note:nth-child(9n+4)::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: -1px;
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(
+      45deg,
+      transparent 46%,
+      rgba(0, 0, 0, 0.08) 50%,
+      rgba(0, 0, 0, 0.04) 54%,
+      transparent 58%
+    );
+    transform: rotate(-45deg);
+    z-index: 2;
+  }
+  
+  /* Crease lines for worn appearance */
+  .sticky-note:nth-child(5n+3) {
+    position: relative;
+  }
+  
+  .sticky-note:nth-child(5n+3)::before {
+    content: '';
+    position: absolute;
+    top: 30%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 0, 0, 0.05) 20%,
+      rgba(0, 0, 0, 0.03) 50%,
+      rgba(0, 0, 0, 0.05) 80%,
+      transparent
+    );
+    transform: rotate(0.5deg);
+    z-index: 1;
+  }
+  
+  /* Deep paper texture with fiber directionality */
+  .sticky-note::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      /* Strong horizontal fiber texture */
+      linear-gradient(90deg, 
+        transparent 94%, 
+        rgba(0, 0, 0, 0.06) 95%, 
+        rgba(0, 0, 0, 0.08) 96%, 
+        rgba(255, 255, 255, 0.25) 97%, 
+        rgba(255, 255, 255, 0.15) 98%, 
+        transparent 100%
+      ),
+      linear-gradient(90deg, 
+        transparent 97%, 
+        rgba(0, 0, 0, 0.04) 98%, 
+        rgba(255, 255, 255, 0.2) 99%, 
+        transparent 100%
+      ),
+      /* Vertical fiber texture */
+      linear-gradient(0deg, 
+        transparent 95%, 
+        rgba(0, 0, 0, 0.05) 96%, 
+        rgba(255, 255, 255, 0.18) 97%, 
+        rgba(0, 0, 0, 0.03) 98%, 
+        transparent 100%
+      ),
+      linear-gradient(0deg, 
+        transparent 98%, 
+        rgba(255, 255, 255, 0.12) 99%, 
+        transparent 100%
+      ),
+      /* Diagonal fiber pattern */
+      linear-gradient(45deg, 
+        transparent 98%, 
+        rgba(0, 0, 0, 0.02) 99%, 
+        transparent 100%
+      ),
+      linear-gradient(-45deg, 
+        transparent 97%, 
+        rgba(255, 255, 255, 0.08) 98%, 
+        transparent 100%
+      ),
+      /* Paper grain - enhanced dots */
+      radial-gradient(circle at 23% 31%, rgba(0, 0, 0, 0.08) 0.3px, rgba(0, 0, 0, 0.04) 0.6px, transparent 0.8px),
+      radial-gradient(circle at 67% 19%, rgba(0, 0, 0, 0.06) 0.2px, rgba(0, 0, 0, 0.02) 0.5px, transparent 0.7px),
+      radial-gradient(circle at 41% 73%, rgba(255, 255, 255, 0.15) 0.4px, rgba(255, 255, 255, 0.08) 0.7px, transparent 1px),
+      radial-gradient(circle at 89% 47%, rgba(0, 0, 0, 0.04) 0.2px, transparent 0.4px),
+      radial-gradient(circle at 14% 86%, rgba(255, 255, 255, 0.12) 0.3px, rgba(255, 255, 255, 0.06) 0.6px, transparent 0.8px),
+      radial-gradient(circle at 78% 63%, rgba(0, 0, 0, 0.03) 0.15px, transparent 0.3px),
+      radial-gradient(circle at 32% 88%, rgba(255, 255, 255, 0.1) 0.25px, transparent 0.5px),
+      /* Complex noise pattern for realistic texture */
+      repeating-linear-gradient(87deg, 
+        transparent, transparent 0.8px, 
+        rgba(0, 0, 0, 0.015) 0.8px, 
+        rgba(0, 0, 0, 0.015) 1.2px,
+        transparent 1.2px, transparent 2px
+      ),
+      repeating-linear-gradient(-23deg, 
+        transparent, transparent 1px, 
+        rgba(255, 255, 255, 0.025) 1px, 
+        rgba(255, 255, 255, 0.025) 1.5px,
+        transparent 1.5px, transparent 2.5px
+      ),
+      /* Fine mesh pattern */
+      repeating-linear-gradient(3deg, 
+        transparent, transparent 0.5px, 
+        rgba(0, 0, 0, 0.008) 0.5px, 
+        rgba(0, 0, 0, 0.008) 0.8px
+      );
+    background-size: 
+      2px 100%, 4px 100%, 100% 2px, 100% 3px,
+      8px 8px, 12px 12px,
+      6px 6px, 9px 9px, 4px 4px, 11px 11px, 7px 7px, 13px 13px, 5px 5px,
+      1.5px 1.5px, 2.5px 2.5px, 1px 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.9;
+    /* Add slight paper warping */
+    transform: perspective(1000px) rotateX(0.5deg) rotateY(0.2deg);
+  }
+  
+  /* Enhanced adhesive tape with pressure indentation */
+  .sticky-note::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 12px;
+    background: linear-gradient(145deg,
+      rgba(255, 255, 255, 0.8) 0%,
+      rgba(240, 240, 240, 0.9) 30%,
+      rgba(220, 220, 220, 0.7) 70%,
+      rgba(200, 200, 200, 0.6) 100%
+    );
+    border-radius: 2px;
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+      /* Pressure indentation effect */
+      inset 0 2px 4px rgba(0, 0, 0, 0.08);
+    pointer-events: none;
+    z-index: 3;
+    /* Enhanced tape texture with wear */
+    background-image: 
+      repeating-linear-gradient(90deg, 
+        transparent, transparent 1px, 
+        rgba(255, 255, 255, 0.1) 1px, 
+        rgba(255, 255, 255, 0.1) 2px
+      ),
+      /* Subtle wear marks */
+      radial-gradient(ellipse at 30% 50%, rgba(0, 0, 0, 0.02) 20%, transparent 40%),
+      radial-gradient(ellipse at 70% 40%, rgba(0, 0, 0, 0.015) 15%, transparent 30%);
+  }
+  
+  /* Paper edge fraying and aging effects */
+  .sticky-note:nth-child(11n+2) {
+    position: relative;
+  }
+  
+  .sticky-note:nth-child(11n+2)::before {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: 0;
+    width: 100%;
+    height: 2px;
+    background: 
+      repeating-linear-gradient(90deg, 
+        transparent 0px, 
+        rgba(0, 0, 0, 0.03) 1px, 
+        transparent 2px, 
+        rgba(0, 0, 0, 0.02) 3px,
+        transparent 5px
+      );
+    z-index: 1;
+  }
+  
+  .sticky-note:nth-child(13n+3) {
+    position: relative;
+  }
+  
+  .sticky-note:nth-child(13n+3)::before {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: 
+      repeating-linear-gradient(0deg, 
+        transparent 0px, 
+        rgba(0, 0, 0, 0.025) 1px, 
+        transparent 2px, 
+        rgba(0, 0, 0, 0.015) 3px,
+        transparent 4px
+      );
+    z-index: 1;
+  }
+  
+  /* Age spots and discoloration */
+  .sticky-note:nth-child(7n+1) {
+    position: relative;
+  }
+  
+  .sticky-note:nth-child(7n+1)::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    right: 15%;
+    width: 8px;
+    height: 6px;
+    background: 
+      radial-gradient(ellipse at center, 
+        rgba(139, 111, 78, 0.08) 0%, 
+        rgba(139, 111, 78, 0.04) 40%, 
+        transparent 70%
+      );
+    border-radius: 50%;
+    z-index: 1;
+  }
+  
+  .sticky-note:nth-child(9n+4) {
+    position: relative;
+  }
+  
+  .sticky-note:nth-child(9n+4)::after {
+    content: '';
+    position: absolute;
+    bottom: 30%;
+    left: 20%;
+    width: 5px;
+    height: 4px;
+    background: 
+      radial-gradient(ellipse at center, 
+        rgba(139, 111, 78, 0.06) 0%, 
+        rgba(139, 111, 78, 0.02) 50%, 
+        transparent 80%
+      );
+    border-radius: 60%;
+    z-index: 1;
+  }
+  
+  /* Subtle finger print marks */
+  .sticky-note:nth-child(15n+7) {
+    position: relative;
+  }
+  
+  .sticky-note:nth-child(15n+7)::before {
+    content: '';
+    position: absolute;
+    top: 60%;
+    right: 25%;
+    width: 12px;
+    height: 10px;
+    background: 
+      radial-gradient(ellipse at center, 
+        transparent 20%, 
+        rgba(0, 0, 0, 0.008) 30%, 
+        transparent 40%,
+        rgba(0, 0, 0, 0.012) 50%,
+        transparent 60%
+      );
+    border-radius: 50%;
+    transform: rotate(25deg);
+    z-index: 1;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 8px 16px rgba(0, 0, 0, 0.06);
+    }
+    50% {
+      box-shadow: 
+        0 4px 8px rgba(59, 130, 246, 0.3),
+        0 12px 24px rgba(59, 130, 246, 0.15);
+    }
+  }
+  
+  .priority-high {
+    @apply border-l-4 border-red-500;
+  }
+  
+  .priority-medium {
+    @apply border-l-4 border-yellow-500;
+  }
+  
+  .priority-low {
+    @apply border-l-4 border-green-500;
+  }
+  
+  .status-pending {
+    @apply bg-blue-50 border-blue-200;
+  }
+  
+  .status-inProgress {
+    @apply bg-yellow-50 border-yellow-200;
+  }
+  
+  .status-completed {
+    @apply bg-green-50 border-green-200;
+  }
+  
+  .status-postponed {
+    @apply bg-gray-50 border-gray-200;
+  }
+  
+  /* Trash Bin Styles */
+  .trash-bin {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #374151 0%, #6b7280 100%);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.2),
+      0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+  
+  .trash-bin:hover {
+    transform: scale(1.1);
+    box-shadow: 
+      0 8px 16px rgba(0, 0, 0, 0.3),
+      0 16px 32px rgba(0, 0, 0, 0.15);
+  }
+  
+  .trash-bin.drag-over {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    transform: scale(1.2);
+    animation: shake 0.5s ease-in-out infinite;
+  }
+  
+  .trash-bin.animating {
+    animation: gobble 0.3s ease-in-out;
+  }
+  
+  .trash-bin-inner {
+    color: white;
+    transition: color 0.3s ease;
+    z-index: 2;
+    position: relative;
+  }
+  
+  .trash-bin.drag-over .trash-bin-inner {
+    color: #ffffff;
+  }
+  
+  .trash-lid {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 8px;
+    background: #4b5563;
+    border-radius: 4px 4px 0 0;
+    transition: transform 0.3s ease;
+    z-index: 3;
+  }
+  
+  .trash-bin.open .trash-lid,
+  .trash-bin.drag-over .trash-lid {
+    transform: translateX(-50%) rotateZ(-45deg) translateY(-8px);
+  }
+  
+  /* Particle effects */
+  .particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #fbbf24;
+    border-radius: 50%;
+    animation: particle-fly 0.8s ease-out forwards;
+  }
+  
+  .particle-1 {
+    top: 20%;
+    left: 20%;
+    animation-delay: 0s;
+  }
+  
+  .particle-2 {
+    top: 20%;
+    right: 20%;
+    animation-delay: 0.1s;
+  }
+  
+  .particle-3 {
+    bottom: 20%;
+    left: 20%;
+    animation-delay: 0.2s;
+  }
+  
+  .particle-4 {
+    bottom: 20%;
+    right: 20%;
+    animation-delay: 0.3s;
+  }
+  
+  @keyframes shake {
+    0%, 100% {
+      transform: scale(1.2) translateX(0);
+    }
+    25% {
+      transform: scale(1.2) translateX(-2px);
+    }
+    75% {
+      transform: scale(1.2) translateX(2px);
+    }
+  }
+  
+  @keyframes gobble {
+    0% {
+      transform: scale(1.2);
+    }
+    50% {
+      transform: scale(1.4);
+    }
+    100% {
+      transform: scale(1.2);
+    }
+  }
+  
+  @keyframes particle-fly {
+    0% {
+      opacity: 1;
+      transform: scale(1) translate(0, 0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0) translate(var(--random-x, 30px), var(--random-y, -30px));
+    }
+  }
+  
+  /* Crumple animation for tasks */
+  @keyframes crumple {
+    0% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+    25% {
+      transform: scale(0.8) rotate(-5deg) skew(2deg, 1deg);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(0.6) rotate(5deg) skew(-3deg, -2deg);
+      opacity: 0.6;
+    }
+    75% {
+      transform: scale(0.4) rotate(-10deg) skew(5deg, 3deg);
+      opacity: 0.4;
+    }
+    100% {
+      transform: scale(0.1) rotate(15deg) skew(-8deg, -5deg);
+      opacity: 0;
+    }
+  }
+  
+  .crumpling {
+    animation: crumple 0.5s ease-in-out forwards;
+    z-index: 100;
+  }
+  
+  
+  @keyframes corner-lift {
+    0% {
+      transform: translateY(0) scale(1) rotate(var(--rotation, 0deg));
+    }
+    100% {
+      transform: translateY(-8px) scale(1.03) rotate(calc(var(--rotation, 0deg) + 1deg));
+    }
+  }
+  
+  /* Apply subtle movement to sticky notes */
+  .sticky-note:nth-child(odd) {
+    --rotation: 1.2deg;
+  }
+  
+  .sticky-note:nth-child(even) {
+    --rotation: -0.8deg;
+  }
+  
+  .sticky-note:nth-child(3n) {
+    --rotation: 1.8deg;
+  }
+  
+  /* Enhanced hover effect with realistic physics */
+  .sticky-note:hover {
+    animation: enhanced-corner-lift 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  /* Pause gentle sway on hover */
+  .sticky-note:hover {
+    animation-play-state: paused;
+  }
+  
+  /* Enhanced micro bounce with paper physics */
+  .sticky-note:active {
+    transform: translateY(-1px) scale(0.97) rotate(var(--rotation, 0deg)) perspective(400px) rotateX(1deg);
+    transition: transform 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Enhanced corner lift animation */
+  @keyframes enhanced-corner-lift {
+    0% {
+      transform: translateY(0) scale(1) rotate(var(--rotation, 0deg)) perspective(800px) rotateX(0deg) rotateY(0deg);
+    }
+    50% {
+      transform: translateY(-4px) scale(1.01) rotate(calc(var(--rotation, 0deg) + 0.5deg)) perspective(600px) rotateX(0.8deg) rotateY(0.3deg);
+    }
+    100% {
+      transform: translateY(-8px) scale(1.03) rotate(calc(var(--rotation, 0deg) + 1deg)) perspective(500px) rotateX(1.2deg) rotateY(0.5deg);
+    }
+  }
+  
+  /* Physics-based settle animation */
+  @keyframes paper-settle {
+    0% {
+      transform: translateY(-8px) scale(1.03) rotate(calc(var(--rotation, 0deg) + 1deg));
+    }
+    30% {
+      transform: translateY(-2px) scale(1.01) rotate(calc(var(--rotation, 0deg) + 0.3deg));
+    }
+    60% {
+      transform: translateY(-1px) scale(1.005) rotate(calc(var(--rotation, 0deg) - 0.1deg));
+    }
+    100% {
+      transform: translateY(0) scale(1) rotate(var(--rotation, 0deg));
+    }
+  }
+  
+  /* Apply settle animation when leaving hover */
+  .sticky-note:not(:hover) {
+    animation: paper-settle 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  /* Realistic drag physics with air resistance */
+  .sticky-note.dragging {
+    opacity: 0.85;
+    transform: rotate(calc(var(--rotation, 0deg) + 8deg)) scale(1.08) perspective(400px) rotateX(2deg) rotateY(1deg);
+    z-index: 50;
+    cursor: grabbing;
+    /* Air resistance effect with flutter */
+    transition: transform 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: drag-flutter 0.3s ease-in-out infinite alternate;
+    /* Enhanced shadows for lifted state */
+    box-shadow: 
+      0 8px 16px rgba(0, 0, 0, 0.25),
+      0 16px 32px rgba(0, 0, 0, 0.15),
+      0 24px 48px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Micro flutter animation during drag */
+  @keyframes drag-flutter {
+    0% {
+      transform: rotate(calc(var(--rotation, 0deg) + 8deg)) scale(1.08) perspective(400px) rotateX(2deg) rotateY(1deg);
+    }
+    100% {
+      transform: rotate(calc(var(--rotation, 0deg) + 8.5deg)) scale(1.085) perspective(380px) rotateX(2.2deg) rotateY(1.1deg);
+    }
+  }
+  
+  /* Environmental breathing animation - simulating air currents */
+  @keyframes environment-breathe {
+    0%, 100% {
+      transform: translateX(0) translateY(0) rotate(var(--rotation, 0deg)) scale(1);
+    }
+    25% {
+      transform: translateX(0.2px) translateY(-0.1px) rotate(calc(var(--rotation, 0deg) + 0.05deg)) scale(1.001);
+    }
+    50% {
+      transform: translateX(-0.1px) translateY(0.2px) rotate(calc(var(--rotation, 0deg) - 0.03deg)) scale(0.999);
+    }
+    75% {
+      transform: translateX(0.15px) translateY(-0.05px) rotate(calc(var(--rotation, 0deg) + 0.02deg)) scale(1.0005);
+    }
+  }
+  
+  /* Apply environmental effects to create living document feel */
+  .sticky-note:nth-child(4n+1) {
+    animation: environment-breathe 12s ease-in-out infinite, gentle-sway 6s ease-in-out infinite;
+    animation-delay: 0s, 0s;
+  }
+  
+  .sticky-note:nth-child(4n+2) {
+    animation: environment-breathe 14s ease-in-out infinite, gentle-sway 7s ease-in-out infinite;
+    animation-delay: 2s, 1s;
+  }
+  
+  .sticky-note:nth-child(4n+3) {
+    animation: environment-breathe 16s ease-in-out infinite, gentle-sway 8s ease-in-out infinite;
+    animation-delay: 4s, 2s;
+  }
+  
+  .sticky-note:nth-child(4n) {
+    animation: environment-breathe 18s ease-in-out infinite, gentle-sway 9s ease-in-out infinite;
+    animation-delay: 6s, 3s;
+  }
+  
+  /* Advanced physics-based touch response */
+  .sticky-note:active {
+    transform: translateY(-1px) scale(0.97) rotate(var(--rotation, 0deg)) perspective(400px) rotateX(1deg);
+    transition: transform 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: paper-compress 0.15s ease-out forwards;
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Paper compression under pressure */
+  @keyframes paper-compress {
+    0% {
+      filter: brightness(1) contrast(1);
+    }
+    50% {
+      filter: brightness(0.98) contrast(1.02);
+      transform: translateY(-1px) scale(0.96) rotate(var(--rotation, 0deg)) perspective(350px) rotateX(1.5deg);
+    }
+    100% {
+      filter: brightness(0.99) contrast(1.01);
+      transform: translateY(-1px) scale(0.97) rotate(var(--rotation, 0deg)) perspective(400px) rotateX(1deg);
+    }
+  }
+  
+  /* Micro surface tension effects */
+  .sticky-note::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      /* Enhanced fiber patterns with surface tension */
+      linear-gradient(90deg, 
+        transparent 94%, 
+        rgba(0, 0, 0, 0.06) 95%, 
+        rgba(0, 0, 0, 0.08) 96%, 
+        rgba(255, 255, 255, 0.25) 97%, 
+        rgba(255, 255, 255, 0.15) 98%, 
+        transparent 100%
+      ),
+      linear-gradient(90deg, 
+        transparent 97%, 
+        rgba(0, 0, 0, 0.04) 98%, 
+        rgba(255, 255, 255, 0.2) 99%, 
+        transparent 100%
+      ),
+      /* Vertical fiber with molecular structure */
+      linear-gradient(0deg, 
+        transparent 95%, 
+        rgba(0, 0, 0, 0.05) 96%, 
+        rgba(255, 255, 255, 0.18) 97%, 
+        rgba(0, 0, 0, 0.03) 98%, 
+        transparent 100%
+      ),
+      /* Micro-fiber cross-weave pattern */
+      repeating-linear-gradient(87deg, 
+        transparent, transparent 0.8px, 
+        rgba(0, 0, 0, 0.015) 0.8px, 
+        rgba(0, 0, 0, 0.015) 1.2px,
+        transparent 1.2px, transparent 2px
+      ),
+      repeating-linear-gradient(-23deg, 
+        transparent, transparent 1px, 
+        rgba(255, 255, 255, 0.025) 1px, 
+        rgba(255, 255, 255, 0.025) 1.5px,
+        transparent 1.5px, transparent 2.5px
+      ),
+      /* Advanced paper grain with molecular detail */
+      radial-gradient(circle at 23% 31%, rgba(0, 0, 0, 0.08) 0.3px, rgba(0, 0, 0, 0.04) 0.6px, transparent 0.8px),
+      radial-gradient(circle at 67% 19%, rgba(0, 0, 0, 0.06) 0.2px, rgba(0, 0, 0, 0.02) 0.5px, transparent 0.7px),
+      radial-gradient(circle at 41% 73%, rgba(255, 255, 255, 0.15) 0.4px, rgba(255, 255, 255, 0.08) 0.7px, transparent 1px),
+      /* Cellulose fiber simulation */
+      repeating-linear-gradient(3deg, 
+        transparent, transparent 0.3px, 
+        rgba(0, 0, 0, 0.008) 0.3px, 
+        rgba(0, 0, 0, 0.008) 0.6px,
+        transparent 0.6px, transparent 1px
+      ),
+      repeating-linear-gradient(177deg, 
+        transparent, transparent 0.4px, 
+        rgba(255, 255, 255, 0.012) 0.4px, 
+        rgba(255, 255, 255, 0.012) 0.8px,
+        transparent 0.8px, transparent 1.2px
+      );
+    background-size: 
+      2px 100%, 4px 100%, 100% 2px,
+      1.5px 1.5px, 2.5px 2.5px,
+      6px 6px, 9px 9px, 4px 4px,
+      0.8px 0.8px, 1.2px 1.2px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.9;
+    /* Enhanced paper warping with surface tension */
+    transform: perspective(1000px) rotateX(0.5deg) rotateY(0.2deg);
+    /* Add subtle shimmer effect */
+    animation: paper-shimmer 20s ease-in-out infinite;
+  }
+  
+  /* Subtle paper shimmer from light refraction */
+  @keyframes paper-shimmer {
+    0%, 100% {
+      opacity: 0.9;
+      filter: brightness(1);
+    }
+    33% {
+      opacity: 0.92;
+      filter: brightness(1.01);
+    }
+    66% {
+      opacity: 0.88;
+      filter: brightness(0.99);
+    }
+  }
+  
+  
+  /* Paper entry animation with realistic physics */
+  @keyframes paper-entry {
+    0% {
+      transform: translateY(10px) scale(0.95) rotate(var(--rotation, 0deg)) perspective(600px) rotateX(3deg);
+      opacity: 0;
+    }
+    30% {
+      transform: translateY(-2px) scale(1.02) rotate(calc(var(--rotation, 0deg) + 1deg)) perspective(700px) rotateX(-0.5deg);
+      opacity: 0.7;
+    }
+    60% {
+      transform: translateY(1px) scale(0.99) rotate(calc(var(--rotation, 0deg) - 0.3deg)) perspective(750px) rotateX(0.2deg);
+      opacity: 0.9;
+    }
+    100% {
+      transform: translateY(0) scale(1) rotate(var(--rotation, 0deg)) perspective(800px) rotateX(0deg);
+      opacity: 1;
+    }
+  }
+  
+  /* Temperature-based expansion (simulating humidity) */
+  @keyframes thermal-expansion {
+    0%, 100% {
+      transform: scale(1) rotate(var(--rotation, 0deg));
+    }
+    50% {
+      transform: scale(1.001) rotate(calc(var(--rotation, 0deg) + 0.02deg));
+    }
+  }
+  
+  /* Apply thermal effects to random notes */
+  .sticky-note:nth-child(17n+3) {
+    animation: thermal-expansion 25s ease-in-out infinite, gentle-sway 6s ease-in-out infinite;
+    animation-delay: 5s, 0s;
+  }
+  
+  .sticky-note:nth-child(19n+7) {
+    animation: thermal-expansion 30s ease-in-out infinite, gentle-sway 7s ease-in-out infinite;
+    animation-delay: 8s, 1s;
+  }
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

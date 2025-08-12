@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visual TODO Widget</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif;
+      background: transparent;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      height: 100%;
+    }
+    
+    #widget-root {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      -webkit-app-region: drag;
+    }
+    
+    .widget-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      transform-origin: top left;
+      padding-bottom: 0; /* 念のためボトムパディングを明示的に0に */
+    }
+    
+    .widget-header {
+      padding: 4px 8px;
+      background: rgba(59, 130, 246, 0.1);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      -webkit-app-region: drag;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    .widget-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: #374151;
+      flex: 1;
+    }
+    
+    .widget-close {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: none;
+      color: white;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: no-drag;
+    }
+    
+    .widget-body {
+      flex: 1;
+      padding: 6px 8px 0 !important; /* 下の余白をなくしてボタン行との隙間を解消 */
+      margin-bottom: -1px; /* 画像エリアとのバランス確保 */
+      display: flex;
+      flex-direction: column;
+      -webkit-app-region: no-drag;
+    }
+    
+    .no-task {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: #9ca3af;
+    }
+    
+    .task-image {
+      width: var(--img, 88px);
+      height: var(--img, 88px);
+      border-radius: 8px;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0;
+      overflow: hidden;
+    }
+    .steps {
+      margin-top: 4px;
+    }
+    .steps .bar {
+      height: 4px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+    .steps .bar > div {
+      height: 100%;
+      background: #10b981;
+    }
+    
+    .task-info {
+      flex: 1;
+    }
+    
+    .task-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .task-meta {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    
+    .task-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .widget-btn {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-complete {
+      background: #22c55e;
+      color: white;
+    }
+    
+    .btn-complete:hover {
+      background: #16a34a;
+    }
+    
+    .btn-skip {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    
+    .btn-skip:hover {
+      background: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div id="widget-root">
+    <div class="widget-content">
+      <div class="widget-header">
+        <div class="widget-title">Visual TODO</div>
+        <button class="widget-close" onclick="window.electronAPI?.widget?.hide()">×</button>
+      </div>
+      <div class="widget-body" id="widget-body">
+        <div class="no-task">
+          <div style="font-size: 24px; margin-bottom: 8px;">📝</div>
+          <div style="font-size: 12px;">タスクがありません</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/widget.tsx"></script>
+</body>
+</html>

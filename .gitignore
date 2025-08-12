@@ -1,0 +1,170 @@
+########################################
+# Dependencies
+########################################
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+########################################
+# Build outputs (Vite/Next/Electron)
+########################################
+dist/
+build/
+release/
+out/
+.vite/
+.next/
+
+########################################
+# Electron packaging artifacts
+########################################
+*.asar
+*.dmg
+*.exe
+*.msi
+*.appx
+*.AppImage
+*.snap
+*.deb
+*.rpm
+win-unpacked/
+linux-unpacked/
+mac*/
+
+########################################
+# Environment variables and secrets
+########################################
+.env
+.env.*
+!.env.example
+.envrc
+.direnv/
+.npmrc
+.yarnrc
+.yarnrc.yml
+*.pem
+*.key
+*.pfx
+*.cert
+*.cer
+*.csr
+.git-credentials
+
+########################################
+# OS
+########################################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+########################################
+# IDE/editor
+########################################
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+########################################
+# Logs
+########################################
+logs
+*.log
+
+########################################
+# TypeScript
+########################################
+*.tsbuildinfo
+
+########################################
+# Playwright/test artifacts
+########################################
+playwright-report/
+.playwright/
+ms-playwright/
+test-results/
+test-generated-*.png
+test-images/
+
+########################################
+# Local tooling caches/directories
+########################################
+.serena/
+.claude/
+.kiro/
+.eslintcache
+.cache/
+.parcel-cache/
+
+########################################
+# Runtime data
+########################################
+pids
+*.pid
+*.seed
+*.pid.lock
+
+########################################
+# Coverage
+########################################
+coverage/
+.nyc_output
+
+########################################
+# Dependency directories
+########################################
+jspm_packages/
+.npm
+
+########################################
+# Optional REPL history
+########################################
+.node_repl_history
+
+########################################
+# Output of 'npm pack'
+########################################
+*.tgz
+.yarn-integrity
+
+########################################
+# Databases / local user data
+########################################
+*.db
+*.sqlite
+*.sqlite3
+
+########################################
+# Temporary files
+########################################
+.tmp/
+temp/
+tmp/
+*.tmp
+*.bak
+*.orig
+*.crash
+*.dmp
+
+########################################
+# Git worktrees (local only)
+########################################
+worktrees/
+.worktree-lock
+*.worktree
+.worktree-config
+
+########################################
+# Root-only transient artifacts
+# (keep lockfiles and config JSON; ignore specific reports only)
+########################################
+/ai-image-test-report.json
+/test-report.json
+/test-results.json

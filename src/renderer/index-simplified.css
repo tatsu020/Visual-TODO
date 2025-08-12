@@ -1,0 +1,441 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html {
+    font-family: Inter, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif;
+  }
+  
+  body {
+    background-color: #f8fafc;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-200 text-secondary-800 hover:bg-secondary-300 focus:ring-secondary-500;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+  
+  .input {
+    @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+  
+  .textarea {
+    @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none;
+  }
+  
+  .select {
+    @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-secondary-200 p-6;
+  }
+  
+  .task-card {
+    @apply bg-white rounded-lg shadow-sm border border-secondary-200 p-4 hover:shadow-md transition-shadow duration-200;
+  }
+  
+  /* Simple Sticky Note Styles - Post-it focused */
+  .sticky-note {
+    @apply relative w-full max-w-sm;
+    min-height: 280px;
+    padding: 16px;
+    margin: 8px;
+    border-radius: 3px;
+    /* Simple shadow system for Post-it effect */
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      0 4px 8px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 1px 0 0 rgba(255, 255, 255, 0.15),
+      inset -1px 0 0 rgba(0, 0, 0, 0.02),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    transform-origin: center;
+    cursor: pointer;
+    position: relative;
+  }
+
+  /* Simple rotation variations for natural Post-it placement */
+  .sticky-note:nth-child(odd) {
+    transform: rotate(1.2deg);
+  }
+
+  .sticky-note:nth-child(even) {
+    transform: rotate(-0.8deg);
+  }
+
+  .sticky-note:nth-child(3n) {
+    transform: rotate(1.8deg);
+  }
+
+  /* Simple hover effect */
+  .sticky-note:hover {
+    transform: translateY(-4px) scale(1.02) rotate(var(--rotation, 0deg));
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.15),
+      0 8px 16px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 1px 0 0 rgba(255, 255, 255, 0.2),
+      inset -1px 0 0 rgba(0, 0, 0, 0.03),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .sticky-note-header {
+    @apply mb-4;
+    min-height: 120px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .sticky-note-footer {
+    @apply mt-4;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Post-it color palette - authentic colors */
+  .sticky-note.priority-high {
+    /* Classic canary yellow */
+    background: linear-gradient(145deg, 
+      #ffeb3b 0%, 
+      #fff176 50%, 
+      #fdd835 100%
+    );
+    border: 1px solid #f57f17;
+    color: #3e2723;
+  }
+  
+  .sticky-note.priority-medium {
+    /* Post-it orange */
+    background: linear-gradient(145deg,
+      #ffb74d 0%,
+      #ffa726 50%,
+      #ff9800 100%
+    );
+    border: 1px solid #e65100;
+    color: #3e2723;
+  }
+  
+  .sticky-note.priority-low {
+    /* Post-it lime green */
+    background: linear-gradient(145deg,
+      #c5e1a5 0%,
+      #aed581 50%,
+      #9ccc65 100%
+    );
+    border: 1px solid #558b2f;
+    color: #1b5e20;
+  }
+  
+  /* Default color */
+  .sticky-note:not(.priority-high):not(.priority-medium):not(.priority-low) {
+    background: linear-gradient(145deg, 
+      #ffeb3b 0%, #fff176 50%, #fdd835 100%
+    );
+    border: 1px solid #f57f17;
+    color: #3e2723;
+  }
+
+  /* Simple paper texture - minimal but effective */
+  .sticky-note::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      /* Basic horizontal fiber pattern */
+      linear-gradient(90deg, 
+        transparent 96%, 
+        rgba(0, 0, 0, 0.03) 97%, 
+        rgba(255, 255, 255, 0.15) 98%, 
+        transparent 100%
+      ),
+      /* Basic vertical fiber pattern */
+      linear-gradient(0deg, 
+        transparent 97%, 
+        rgba(0, 0, 0, 0.02) 98%, 
+        rgba(255, 255, 255, 0.12) 99%, 
+        transparent 100%
+      ),
+      /* Simple paper grain */
+      radial-gradient(circle at 25% 35%, rgba(0, 0, 0, 0.04) 0.5px, transparent 1px),
+      radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.08) 0.3px, transparent 0.8px);
+    background-size: 
+      3px 100%, 100% 3px, 8px 8px, 12px 12px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  /* Simple adhesive tape effect */
+  .sticky-note::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 10px;
+    background: linear-gradient(145deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(230, 230, 230, 0.8) 100%
+    );
+    border-radius: 2px;
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+    pointer-events: none;
+    z-index: 3;
+  }
+  
+  /* Status effects */
+  .sticky-note.status-completed {
+    opacity: 0.7;
+    filter: grayscale(0.2);
+  }
+  
+  .sticky-note.status-completed::after {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: #22c55e;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  /* Simple drag state */
+  .sticky-note.dragging {
+    opacity: 0.8;
+    transform: rotate(8deg) scale(1.05);
+    z-index: 50;
+    cursor: grabbing;
+    box-shadow: 
+      0 8px 16px rgba(0, 0, 0, 0.2),
+      0 16px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Crumple animation */
+  @keyframes crumple {
+    0% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+    25% {
+      transform: scale(0.8) rotate(-5deg) skew(2deg, 1deg);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(0.6) rotate(5deg) skew(-3deg, -2deg);
+      opacity: 0.6;
+    }
+    75% {
+      transform: scale(0.4) rotate(-10deg) skew(5deg, 3deg);
+      opacity: 0.4;
+    }
+    100% {
+      transform: scale(0.1) rotate(15deg) skew(-8deg, -5deg);
+      opacity: 0;
+    }
+  }
+  
+  .crumpling {
+    animation: crumple 0.5s ease-in-out forwards;
+    z-index: 100;
+  }
+  
+  /* Priority borders */
+  .priority-high {
+    @apply border-l-4 border-red-500;
+  }
+  
+  .priority-medium {
+    @apply border-l-4 border-yellow-500;
+  }
+  
+  .priority-low {
+    @apply border-l-4 border-green-500;
+  }
+  
+  /* Trash Bin Styles */
+  .trash-bin {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #374151 0%, #6b7280 100%);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.2),
+      0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+  
+  .trash-bin:hover {
+    transform: scale(1.1);
+  }
+  
+  .trash-bin.drag-over {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    transform: scale(1.2);
+    animation: shake 0.5s ease-in-out infinite;
+  }
+  
+  .trash-bin.animating {
+    animation: gobble 0.3s ease-in-out;
+  }
+  
+  .trash-bin-inner {
+    color: white;
+    transition: color 0.3s ease;
+    z-index: 2;
+    position: relative;
+  }
+  
+  .trash-lid {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 8px;
+    background: #4b5563;
+    border-radius: 4px 4px 0 0;
+    transition: transform 0.3s ease;
+    z-index: 3;
+  }
+  
+  .trash-bin.open .trash-lid,
+  .trash-bin.drag-over .trash-lid {
+    transform: translateX(-50%) rotateZ(-45deg) translateY(-8px);
+  }
+  
+  /* Particle effects */
+  .particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #fbbf24;
+    border-radius: 50%;
+    animation: particle-fly 0.8s ease-out forwards;
+  }
+  
+  .particle-1 {
+    top: 20%;
+    left: 20%;
+    animation-delay: 0s;
+  }
+  
+  .particle-2 {
+    top: 20%;
+    right: 20%;
+    animation-delay: 0.1s;
+  }
+  
+  .particle-3 {
+    bottom: 20%;
+    left: 20%;
+    animation-delay: 0.2s;
+  }
+  
+  .particle-4 {
+    bottom: 20%;
+    right: 20%;
+    animation-delay: 0.3s;
+  }
+  
+  @keyframes shake {
+    0%, 100% {
+      transform: scale(1.2) translateX(0);
+    }
+    25% {
+      transform: scale(1.2) translateX(-2px);
+    }
+    75% {
+      transform: scale(1.2) translateX(2px);
+    }
+  }
+  
+  @keyframes gobble {
+    0% {
+      transform: scale(1.2);
+    }
+    50% {
+      transform: scale(1.4);
+    }
+    100% {
+      transform: scale(1.2);
+    }
+  }
+  
+  @keyframes particle-fly {
+    0% {
+      opacity: 1;
+      transform: scale(1) translate(0, 0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0) translate(var(--random-x, 30px), var(--random-y, -30px));
+    }
+  }
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

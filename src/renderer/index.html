@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visual TODO App</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif;
+      background-color: #f8fafc;
+      overflow: hidden;
+    }
+    
+    #root {
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    .title-bar {
+      -webkit-app-region: drag;
+      background: #1f2937;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      user-select: none;
+    }
+    
+    .title-bar-controls {
+      -webkit-app-region: no-drag;
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 8px;
+    }
+    
+    .title-bar-button {
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+    
+    .title-bar-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .title-bar-button.close:hover {
+      background-color: #ef4444;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="title-bar">
+    <span>Visual TODO App</span>
+    <div class="title-bar-controls">
+      <div class="title-bar-button minimize" onclick="window.electronAPI.minimize()">−</div>
+      <div class="title-bar-button close" onclick="window.electronAPI.close()">×</div>
+    </div>
+  </div>
+  <div id="root"></div>
+  <script type="module" src="/main.tsx"></script>
+</body>
+</html>
