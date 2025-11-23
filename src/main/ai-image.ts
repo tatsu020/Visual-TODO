@@ -612,10 +612,10 @@ export class AIImageGenerator {
       }
 
       const result = await this.genAI!.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-2.5-flash-image",
         contents,
         config: {
-          responseModalities: ["TEXT", "IMAGE"]
+          responseModalities: ["IMAGE"]
         }
       });
 

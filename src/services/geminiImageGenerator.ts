@@ -116,10 +116,10 @@ export class GeminiImageGenerator {
       
       // Gemini API での画像生成
       const result = await this.genAI.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-2.5-flash-image",
         contents: prompt,
         config: {
-          responseModalities: ["TEXT", "IMAGE"]
+          responseModalities: ["IMAGE"]
         }
       });
       
