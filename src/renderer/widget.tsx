@@ -35,15 +35,11 @@ const Widget: React.FC = () => {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
       // 進行中タスクを優先的に取得。なければ保留中タスクをフォールバック
-      let rows = await window.electronAPI.database.query(
-        'SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, createdAt ASC',
-        ['inProgress']
-      );
+      let rowsResponse = await window.electronAPI.tasks.list({ status: 'inProgress', orderByPriority: true });
+      let rows = rowsResponse?.success && Array.isArray(rowsResponse.tasks) ? rowsResponse.tasks as Task[] : [];
       if (!rows || rows.length === 0) {
-        rows = await window.electronAPI.database.query(
-          'SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, createdAt ASC',
-          ['pending']
-        );
+        const pending = await window.electronAPI.tasks.list({ status: 'pending', orderByPriority: true });
+        rows = pending?.success && Array.isArray(pending.tasks) ? pending.tasks as Task[] : [];
       }
       setTasks(rows || []);
       setCurrentIndex(prev => {
@@ -79,12 +75,12 @@ const Widget: React.FC = () => {
 
   const completeCurrentTask = async () => {
     const task = tasks[currentIndex];
-    if (!task) return;
+    if (!task || task.id == null) return;
     
     try {
-      await window.electronAPI.database.query(
-        'UPDATE tasks SET status = ?, completedAt = ?, updatedAt = ? WHERE id = ?',
-        ['completed', new Date().toISOString(), new Date().toISOString(), task.id]
+      await window.electronAPI.tasks.update(
+        task.id,
+        { status: 'completed', completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
       );
       // 完了後は最新の進行中/保留タスクを再読込
       await loadTasks();

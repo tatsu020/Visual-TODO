@@ -404,23 +404,100 @@ class VisualTodoApp {
     ipcMain.handle('store:get', (_, key: keyof AppStore) => this.store.get(key));
     ipcMain.handle('store:set', (_, key: keyof AppStore, value: any) => this.store.set(key, value));
 
-    // データベースIPCハンドラー復元
-    ipcMain.handle('database:query', async (_, query: string, params?: any[]) => {
-      const result = await this.database.query(query, params);
+    // Database IPC (typed)
+    ipcMain.handle('tasks:list', async (_evt, filter?: { status?: string; orderByPriority?: boolean }) => {
       try {
-        if (typeof query === 'string') {
-          const normalized = query.toLowerCase().replace(/\s+/g, ' ').trim();
-          const isMutation = /^(insert|update|delete|replace)/.test(normalized);
-          const touchesTasks = normalized.includes(' into tasks') ||
-            normalized.includes(' update tasks') ||
-            normalized.includes(' delete from tasks') ||
-            /\btasks\b/.test(normalized) && isMutation;
-          if (isMutation && touchesTasks) {
-            this.broadcast('task:updated');
-          }
-        }
-      } catch { }
-      return result;
+        const tasks = filter?.status
+          ? await this.database.getTasksByStatus(filter.status, !!filter.orderByPriority)
+          : await this.database.getTasks();
+        return { success: true, tasks };
+      } catch (error) {
+        console.error('Failed to list tasks:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:listForWidget', async () => {
+      try {
+        const tasks = await this.database.getPreferredTasksForWidget();
+        return { success: true, tasks };
+      } catch (error) {
+        console.error('Failed to list tasks for widget:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:create', async (_evt, input: any) => {
+      try {
+        const task = await this.database.createTaskFromInput(input);
+        this.broadcast('task:updated');
+        return { success: true, task };
+      } catch (error) {
+        console.error('Failed to create task:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:update', async (_evt, id: number, updates: any) => {
+      try {
+        await this.database.updateTask(id, updates);
+        this.broadcast('task:updated');
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to update task:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:delete', async (_evt, id: number) => {
+      try {
+        await this.database.deleteTask(id);
+        this.broadcast('task:updated');
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('userProfile:get', async () => {
+      try {
+        const profile = await this.database.getUserProfile();
+        return { success: true, profile };
+      } catch (error) {
+        console.error('Failed to get user profile:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('userProfile:save', async (_evt, payload: any) => {
+      try {
+        await this.database.createOrUpdateUserProfile(payload);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to save user profile:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('settings:getMany', async (_evt, keys: string[]) => {
+      try {
+        const values = await this.database.getSettings(keys);
+        return { success: true, values };
+      } catch (error) {
+        console.error('Failed to get settings:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('settings:setMany', async (_evt, entries: Record<string, string>) => {
+      try {
+        await this.database.setSettings(entries);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to set settings:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
     });
 
     ipcMain.handle('dialog:openFile', async (_, filters?: Electron.FileFilter[]) => {

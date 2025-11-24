@@ -112,9 +112,6 @@ declare global {
         get: (key: string) => Promise<any>;
         set: (key: string, value: any) => Promise<void>;
       };
-      database: {
-        query: (query: string, params?: any[]) => Promise<any>;
-      };
       dialog: {
         openFile: (filters?: any[]) => Promise<any>;
       };
@@ -126,10 +123,6 @@ declare global {
         hide: () => Promise<void>;
         toggle: () => Promise<void>;
       };
-      gemini?: {
-        initialize: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
-        generateImage: (options: { prompt: string; style?: string; size?: string }) => Promise<any>;
-      };
       ai?: {
         generateTaskImage: (taskTitle: string, taskDescription: string, userDescription: string, options?: any, taskId?: number) => Promise<{ success: boolean; imageUrl?: string; error?: string }>;
         regenerateTaskImage: (taskId: number) => Promise<{ success: boolean; imageUrl?: string; error?: string }>;
@@ -139,13 +132,27 @@ declare global {
         getProvider: () => Promise<'gemini' | 'openai'>;
         getCacheDir: () => Promise<string>;
       };
-      settings?: {
+      tasks: {
+        list: (filter?: { status?: string; orderByPriority?: boolean }) => Promise<{ success: boolean; tasks?: Task[] }>;
+        listForWidget: () => Promise<{ success: boolean; tasks?: Task[] }>;
+        create: (task: any) => Promise<{ success: boolean; task?: Task; error?: string }>;
+        update: (id: number, updates: Partial<Task>) => Promise<{ success: boolean; error?: string }>;
+        delete: (id: number) => Promise<{ success: boolean; error?: string }>;
+        getWithSteps: (taskId: number) => Promise<{ success: boolean; task?: TaskWithSteps | null; error?: string }>;
+      };
+      userProfile: {
+        get: () => Promise<{ success: boolean; profile?: UserProfile | null; error?: string }>;
+        save: (profile: any) => Promise<{ success: boolean; error?: string }>;
+      };
+      settings: {
         setApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
         hasApiKey: () => Promise<boolean>;
         clearApiKey: () => Promise<{ success: boolean; error?: string }>;
         setOpenAIApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
         hasOpenAIApiKey: () => Promise<boolean>;
         clearOpenAIApiKey: () => Promise<{ success: boolean; error?: string }>;
+        getMany: (keys: string[]) => Promise<{ success: boolean; values?: Record<string, string | null>; error?: string }>;
+        setMany: (entries: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
       };
       taskSteps?: {
         getByTaskId: (taskId: number) => Promise<{ success: boolean; steps: any[] }>;

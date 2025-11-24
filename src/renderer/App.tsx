@@ -64,7 +64,7 @@ function App() {
       <div className="h-full flex items-center justify-center bg-secondary-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-secondary-600">アプリを初期化中... (Hot Reload Test)</p>
+          <p className="text-secondary-600">Loading Visual TODO App...</p>
         </div>
       </div>
     );
