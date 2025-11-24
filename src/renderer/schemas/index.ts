@@ -10,17 +10,15 @@ export const TaskCreateSchema = z.object({
     .max(1000, '説明は1000文字以内で入力してください')
     .optional()
     .transform(val => val?.trim() || ''),
-  category: z.enum(['work', 'health', 'study', 'hobby', 'household', 'social', 'finance', 'general'], {
-    errorMap: () => ({ message: '有効なカテゴリを選択してください' })
-  }),
   type: z.enum(['immediate', 'recurring', 'scheduled'], {
     errorMap: () => ({ message: '有効なタイプを選択してください' })
   }),
   scheduledTime: z.string()
     .optional()
-    .refine(val => !val || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val), {
-      message: '有効な日時形式で入力してください (YYYY-MM-DDTHH:MM)'
-    }),
+    .transform(val => val?.trim()),
+  scheduledTimeEnd: z.string()
+    .optional()
+    .transform(val => val?.trim()),
   estimatedDuration: z.number()
     .min(1, '所要時間は1分以上で入力してください')
     .max(1440, '所要時間は24時間(1440分)以内で入力してください')
@@ -33,7 +31,14 @@ export const TaskCreateSchema = z.object({
     .optional()
     .refine(val => !val || /^\d{4}-\d{2}-\d{2}$/.test(val), {
       message: '有効な日付形式で入力してください (YYYY-MM-DD)'
-    })
+    }),
+  location: z.string()
+    .max(200, '場所は200文字以内で入力してください')
+    .optional()
+    .transform(val => val?.trim()),
+  priority: z.enum(['high', 'medium', 'low'], {
+    errorMap: () => ({ message: '有効な優先度を選択してください' })
+  }).optional()
 });
 
 export const TaskUpdateSchema = TaskCreateSchema.partial().extend({
@@ -53,7 +58,7 @@ export const UserProfileSchema = z.object({
   artStyle: z.enum(['anime', 'realistic', 'watercolor', 'pixel', 'sketch', 'cartoon', 'minimalist'], {
     errorMap: () => ({ message: '有効なアートスタイルを選択してください' })
   }),
-  quality: z.enum(['low', 'medium', 'high']).optional()
+  quality: z.enum(['low', 'medium', 'high']).nullish().transform(val => val ?? undefined)
 });
 
 // APIキー関連のスキーマ
@@ -83,7 +88,7 @@ export const sanitizeString = (value: unknown): string => {
   if (typeof value !== 'string') {
     throw new Error('文字列である必要があります');
   }
-  
+
   // SQLインジェクション防止: 危険な文字列をエスケープ
   return value
     .replace(/'/g, "''")  // シングルクォートをエスケープ

@@ -18,28 +18,23 @@ const electronAPI = {
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   minimize: () => ipcRenderer.invoke('app:minimize'),
   close: () => ipcRenderer.invoke('app:close'),
-  
+
   // Store operations
   store: {
     get: (key: string) => ipcRenderer.invoke('store:get', key),
     set: (key: string, value: any) => ipcRenderer.invoke('store:set', key, value)
   },
-  
-  // Database operations
-  database: {
-    query: (query: string, params?: any[]) => ipcRenderer.invoke('database:query', query, params)
-  },
-  
+
   // Dialog operations
   dialog: {
     openFile: (filters?: Electron.FileFilter[]) => ipcRenderer.invoke('dialog:openFile', filters)
   },
-  
+
   // Shell operations
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url)
   },
-  
+
   // Widget controls
   widget: {
     show: () => ipcRenderer.invoke('widget:show'),
@@ -48,14 +43,14 @@ const electronAPI = {
     setSize: (width: number, height: number) => ipcRenderer.invoke('widget:setSize', width, height),
     setZoom: (factor: number) => ipcRenderer.invoke('widget:setZoom', factor)
   },
-  
+
   // OpenAI API
   openai: {
     initialize: (apiKey: string) => ipcRenderer.invoke('openai:initialize', apiKey),
-    generateImage: (options: { prompt: string; size?: string; quality?: string; n?: number }) => 
+    generateImage: (options: { prompt: string; size?: string; quality?: string; n?: number }) =>
       ipcRenderer.invoke('openai:generateImage', options)
   },
-  
+
   // AI Image Generation
   ai: {
     generateTaskImage: (taskTitle: string, taskDescription: string, userDescription: string, options?: any, taskId?: number) =>
@@ -69,29 +64,46 @@ const electronAPI = {
       ipcRenderer.invoke('ai:getImageUrlByTaskId', taskId),
     setProvider: (provider: 'gemini' | 'openai') =>
       ipcRenderer.invoke('ai:setProvider', provider),
-    getProvider: () => ipcRenderer.invoke('ai:getProvider')
+    getProvider: () => ipcRenderer.invoke('ai:getProvider'),
+    getCacheDir: () => ipcRenderer.invoke('ai:getCacheDir')
   },
-  
+
   // TaskStep operations
   taskSteps: {
-    create: (step: Omit<TaskStep, 'id' | 'created_at' | 'updated_at'>) => 
+    create: (step: Omit<TaskStep, 'id' | 'created_at' | 'updated_at'>) =>
       ipcRenderer.invoke('taskSteps:create', step),
-    getByTaskId: (taskId: number) => 
+    getByTaskId: (taskId: number) =>
       ipcRenderer.invoke('taskSteps:getByTaskId', taskId),
-    update: (id: number, updates: Partial<TaskStep>) => 
+    update: (id: number, updates: Partial<TaskStep>) =>
       ipcRenderer.invoke('taskSteps:update', id, updates),
-    delete: (id: number) => 
+    delete: (id: number) =>
       ipcRenderer.invoke('taskSteps:delete', id),
-    reorder: (stepIds: number[]) => 
+    reorder: (stepIds: number[]) =>
       ipcRenderer.invoke('taskSteps:reorder', stepIds)
   },
-  
-  // Tasks with steps
+
+  // Task operations
   tasks: {
-    getWithSteps: (taskId: number) => 
+    list: (filter?: { status?: string; orderByPriority?: boolean }) =>
+      ipcRenderer.invoke('tasks:list', filter),
+    listForWidget: () =>
+      ipcRenderer.invoke('tasks:listForWidget'),
+    create: (task: any) =>
+      ipcRenderer.invoke('tasks:create', task),
+    update: (id: number, updates: any) =>
+      ipcRenderer.invoke('tasks:update', id, updates),
+    delete: (id: number) =>
+      ipcRenderer.invoke('tasks:delete', id),
+    getWithSteps: (taskId: number) =>
       ipcRenderer.invoke('tasks:getWithSteps', taskId)
   },
-  
+
+  // User profile operations
+  userProfile: {
+    get: () => ipcRenderer.invoke('userProfile:get'),
+    save: (profile: any) => ipcRenderer.invoke('userProfile:save', profile)
+  },
+
   // Secure Settings Management
   settings: {
     setApiKey: (apiKey: string) => ipcRenderer.invoke('settings:setApiKey', apiKey),
@@ -99,9 +111,11 @@ const electronAPI = {
     clearApiKey: () => ipcRenderer.invoke('settings:clearApiKey'),
     setOpenAIApiKey: (apiKey: string) => ipcRenderer.invoke('settings:setOpenAIApiKey', apiKey),
     hasOpenAIApiKey: () => ipcRenderer.invoke('settings:hasOpenAIApiKey'),
-    clearOpenAIApiKey: () => ipcRenderer.invoke('settings:clearOpenAIApiKey')
+    clearOpenAIApiKey: () => ipcRenderer.invoke('settings:clearOpenAIApiKey'),
+    getMany: (keys: string[]) => ipcRenderer.invoke('settings:getMany', keys),
+    setMany: (entries: Record<string, string>) => ipcRenderer.invoke('settings:setMany', entries)
   },
-  
+
   // Event listeners
   on: (channel: string, callback: Function) => {
     const validChannels = [
@@ -109,14 +123,15 @@ const electronAPI = {
       'widget:completeTask',
       'widget:skipTask',
       'task:updated',
-      'notification:clicked'
+      'notification:clicked',
+      'ai:image-progress'
     ];
-    
+
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event, ...args) => callback(...args));
     }
   },
-  
+
   // Remove event listeners
   removeAllListeners: (channel: string) => {
     const validChannels = [
@@ -124,9 +139,10 @@ const electronAPI = {
       'widget:completeTask',
       'widget:skipTask',
       'task:updated',
-      'notification:clicked'
+      'notification:clicked',
+      'ai:image-progress'
     ];
-    
+
     if (validChannels.includes(channel)) {
       ipcRenderer.removeAllListeners(channel);
     }

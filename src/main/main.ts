@@ -323,9 +323,15 @@ class VisualTodoApp {
     this.store = new Store<AppStore>();
     this.database = new DatabaseManager();
     this.notifications = new NotificationManager();
-    this.aiImageGenerator = new AIImageGenerator(this.database);
+    this.aiImageGenerator = new AIImageGenerator(
+      this.database,
+      (progress) => {
+        // 進行度を全てのウィンドウにブロードキャスト
+        this.broadcast('ai:image-progress', progress);
+      }
+    );
     this.isDev = !app.isPackaged;
-    
+
     // 修正: コンストラクタでイベントハンドラーを設定（無限ループ回避）
     this.setupEventHandlers();
   }
@@ -394,27 +400,104 @@ class VisualTodoApp {
     ipcMain.handle('app:getVersion', () => app.getVersion());
     ipcMain.handle('app:minimize', () => this.mainWindow?.minimize());
     ipcMain.handle('app:close', () => this.mainWindow?.close());
-    
+
     ipcMain.handle('store:get', (_, key: keyof AppStore) => this.store.get(key));
     ipcMain.handle('store:set', (_, key: keyof AppStore, value: any) => this.store.set(key, value));
-    
-    // データベースIPCハンドラー復元
-    ipcMain.handle('database:query', async (_, query: string, params?: any[]) => {
-      const result = await this.database.query(query, params);
+
+    // Database IPC (typed)
+    ipcMain.handle('tasks:list', async (_evt, filter?: { status?: string; orderByPriority?: boolean }) => {
       try {
-        if (typeof query === 'string') {
-          const normalized = query.toLowerCase().replace(/\s+/g, ' ').trim();
-          const isMutation = /^(insert|update|delete|replace)/.test(normalized);
-          const touchesTasks = normalized.includes(' into tasks') ||
-                               normalized.includes(' update tasks') ||
-                               normalized.includes(' delete from tasks') ||
-                               /\btasks\b/.test(normalized) && isMutation;
-          if (isMutation && touchesTasks) {
-            this.broadcast('task:updated');
-          }
-        }
-      } catch {}
-      return result;
+        const tasks = filter?.status
+          ? await this.database.getTasksByStatus(filter.status, !!filter.orderByPriority)
+          : await this.database.getTasks();
+        return { success: true, tasks };
+      } catch (error) {
+        console.error('Failed to list tasks:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:listForWidget', async () => {
+      try {
+        const tasks = await this.database.getPreferredTasksForWidget();
+        return { success: true, tasks };
+      } catch (error) {
+        console.error('Failed to list tasks for widget:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:create', async (_evt, input: any) => {
+      try {
+        const task = await this.database.createTaskFromInput(input);
+        this.broadcast('task:updated');
+        return { success: true, task };
+      } catch (error) {
+        console.error('Failed to create task:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:update', async (_evt, id: number, updates: any) => {
+      try {
+        await this.database.updateTask(id, updates);
+        this.broadcast('task:updated');
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to update task:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('tasks:delete', async (_evt, id: number) => {
+      try {
+        await this.database.deleteTask(id);
+        this.broadcast('task:updated');
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('userProfile:get', async () => {
+      try {
+        const profile = await this.database.getUserProfile();
+        return { success: true, profile };
+      } catch (error) {
+        console.error('Failed to get user profile:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('userProfile:save', async (_evt, payload: any) => {
+      try {
+        await this.database.createOrUpdateUserProfile(payload);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to save user profile:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('settings:getMany', async (_evt, keys: string[]) => {
+      try {
+        const values = await this.database.getSettings(keys);
+        return { success: true, values };
+      } catch (error) {
+        console.error('Failed to get settings:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
+    ipcMain.handle('settings:setMany', async (_evt, entries: Record<string, string>) => {
+      try {
+        await this.database.setSettings(entries);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to set settings:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
     });
 
     ipcMain.handle('dialog:openFile', async (_, filters?: Electron.FileFilter[]) => {
@@ -441,7 +524,7 @@ class VisualTodoApp {
           this.widget.setSize(Math.max(200, Math.min(width, 800)), Math.max(160, Math.min(height, 600)));
           return true;
         }
-      } catch {}
+      } catch { }
       return false;
     });
     ipcMain.handle('widget:setZoom', (_evt, factor: number) => {
@@ -451,7 +534,7 @@ class VisualTodoApp {
           this.widget.webContents.setZoomFactor(safe);
           return true;
         }
-      } catch {}
+      } catch { }
       return false;
     });
 
@@ -464,8 +547,8 @@ class VisualTodoApp {
         return result; // 構造化されたレスポンス（success/error）を直接返す
       } catch (error) {
         console.error('Failed to generate task image:', error);
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: {
             type: 'UNKNOWN_ERROR',
             message: error instanceof Error ? error.message : String(error),
@@ -482,8 +565,8 @@ class VisualTodoApp {
         return result; // 構造化されたレスポンス（success/error）を直接返す
       } catch (error) {
         console.error('Failed to regenerate task image:', error);
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: {
             type: 'UNKNOWN_ERROR',
             message: error instanceof Error ? error.message : String(error),
@@ -504,9 +587,9 @@ class VisualTodoApp {
         return { success: true, imageUrl: result };
       } catch (error) {
         console.error('Failed to convert file URL to base64:', error);
-        return { 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
         };
       }
     });
@@ -518,9 +601,9 @@ class VisualTodoApp {
         return { success: true, imageUrl };
       } catch (error) {
         console.error('Failed to get image URL by task ID:', error);
-        return { 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
         };
       }
     });
@@ -531,14 +614,14 @@ class VisualTodoApp {
         if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
           return { success: false, error: 'Invalid API key provided' };
         }
-        
+
         await this.database.query(
           'INSERT INTO settings (key, value, updatedAt) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = ?, updatedAt = ?',
           ['geminiApiKey', apiKey.trim(), new Date().toISOString(), apiKey.trim(), new Date().toISOString()]
         );
-        
+
         await this.aiImageGenerator.initialize(apiKey.trim());
-        
+
         return { success: true };
       } catch (error) {
         console.error('Failed to set API key:', error);
@@ -609,6 +692,10 @@ class VisualTodoApp {
 
     ipcMain.handle('ai:getProvider', () => {
       return this.aiImageGenerator.getProvider();
+    });
+
+    ipcMain.handle('ai:getCacheDir', () => {
+      return this.aiImageGenerator.getCacheDir();
     });
 
     ipcMain.handle('settings:hasApiKey', async () => {
@@ -703,9 +790,9 @@ class VisualTodoApp {
     // 環境変数を直接ロードするのではなく、.env.localファイルを明示的に読み込み
     const fs = require('fs');
     const path = require('path');
-    
+
     let preferredPort = '5173'; // デフォルトポート
-    
+
     try {
       // パスを絶対パスで解決
       const envLocalPath = path.resolve(__dirname, '../../../.env.local');
@@ -724,25 +811,25 @@ class VisualTodoApp {
     } catch (error) {
       console.warn('[Main] Could not read .env.local file:', error);
     }
-    
+
     // 環境変数からもチェック
     if (process.env.VITE_PORT) {
       preferredPort = process.env.VITE_PORT;
       console.log(`🔧 [Main] Using VITE_PORT from environment: ${preferredPort}`);
     }
-    
+
     console.log(`🔧 [Main] Attempting to connect to Vite server on port ${preferredPort}`);
-    
+
     // 指定されたポートでViteサーバーが動作しているか確認
     const isViteRunning = await this.checkVitePort(parseInt(preferredPort));
     if (isViteRunning) {
       console.log(`✅ [Main] Confirmed Vite server running on port ${preferredPort}`);
       return preferredPort;
     }
-    
+
     // 指定ポートでサーバーが利用できない場合、他のポートをスキャン
     console.log(`⚠️ [Main] Vite server not found on port ${preferredPort}, scanning nearby ports...`);
-    
+
     for (let port = parseInt(preferredPort) - 5; port <= parseInt(preferredPort) + 5; port++) {
       if (port === parseInt(preferredPort)) continue; // 既にチェック済み
       try {
@@ -755,7 +842,7 @@ class VisualTodoApp {
         continue;
       }
     }
-    
+
     // フォールバック: 設定されたポートを使用（エラーは後で処理）
     console.warn(`⚠️ [Main] Could not find running Vite server, will attempt connection to configured port ${preferredPort}`);
     return preferredPort;
@@ -772,10 +859,10 @@ class VisualTodoApp {
         family: 4 // IPv4を強制
       }, (res) => {
         // Viteサーバーの検出ロジックを改善
-        const isViteServer = res.statusCode === 200 || res.statusCode === 304 || 
-                           (res.headers['server'] && res.headers['server'].includes('vite')) ||
-                           res.headers['x-powered-by'] === 'vite' ||
-                           (res.headers['accept-ranges'] === 'bytes'); // Viteの特徴
+        const isViteServer = res.statusCode === 200 || res.statusCode === 304 ||
+          (res.headers['server'] && res.headers['server'].includes('vite')) ||
+          res.headers['x-powered-by'] === 'vite' ||
+          (res.headers['accept-ranges'] === 'bytes'); // Viteの特徴
         console.log(`🔍 [Main] Port ${port} check - Status: ${res.statusCode}, Headers: ${JSON.stringify(res.headers)}`);
         resolve(isViteServer);
       });
@@ -789,7 +876,7 @@ class VisualTodoApp {
         req.destroy();
         resolve(false);
       });
-      
+
       req.end();
     });
   }
@@ -798,12 +885,12 @@ class VisualTodoApp {
     return new Promise((resolve) => {
       const { createServer } = require('net');
       const server = createServer();
-      
+
       server.listen(port, () => {
         server.once('close', () => resolve(true));
         server.close();
       });
-      
+
       server.on('error', () => resolve(false));
     });
   }
@@ -815,12 +902,12 @@ class VisualTodoApp {
       const providerResult = await this.database.query('SELECT value FROM settings WHERE key = ?', ['imageProvider']);
       let apiKey: string | null = null;
       let openaiApiKey: string | null = null;
-      
+
       if (apiKeyResult.length > 0 && apiKeyResult[0].value) {
         apiKey = apiKeyResult[0].value;
       } else {
         apiKey = process.env.GEMINI_API_KEY || null;
-        
+
         if (apiKey) {
           await this.database.query(
             'INSERT INTO settings (key, value, updatedAt) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = ?, updatedAt = ?',
@@ -828,7 +915,7 @@ class VisualTodoApp {
           );
         }
       }
-      
+
       if (openaiKeyResult.length > 0 && openaiKeyResult[0].value) {
         openaiApiKey = openaiKeyResult[0].value;
       } else {
@@ -867,7 +954,7 @@ class VisualTodoApp {
 
   private async createMainWindow() {
     console.log('[Main] Creating main window...');
-    
+
     const bounds = this.store.get('windowBounds') || { width: 1200, height: 800 };
 
     this.mainWindow = new BrowserWindow({
@@ -900,7 +987,7 @@ class VisualTodoApp {
           }
         }
       });
-    } catch {}
+    } catch { }
 
     if (this.isDev) {
       const port = await this.findVitePort();
@@ -913,7 +1000,7 @@ class VisualTodoApp {
 
     this.mainWindow.once('ready-to-show', () => {
       console.log('[Main] ready-to-show event fired, showing window');
-      try { this.mainWindow?.webContents.setZoomFactor(1); } catch {}
+      try { this.mainWindow?.webContents.setZoomFactor(1); } catch { }
       this.mainWindow?.show();
     });
 

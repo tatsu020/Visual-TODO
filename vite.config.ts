@@ -34,15 +34,16 @@ export default defineConfig(({ mode }) => {
   server: {
     port: vitePort,
     host: '127.0.0.1', // IPv4を強制（localhostはIPv6を使用する場合がある）
-    strictPort: true, // 指定ポートを厳密に使用（失敗時はエラー）
+    strictPort: false, // ポートが使用中の場合は自動的に別のポートを使用
     open: false,
     hmr: {
-      port: vitePort + 1, // HMRポートも動的に設定
-      host: '127.0.0.1' // HMRもIPv4を強制
+      host: '127.0.0.1', // HMRもIPv4を強制
+      protocol: 'ws', // WebSocketプロトコルを明示的に指定
+      // portとclientPortは自動検出に任せる（Electronでより安定）
     },
     // Hot Reload機能の強化
     watch: {
-      usePolling: true, // ファイル変更監視の改善
+      usePolling: true, // ファイル変更監視の改善（Windowsで必要）
       interval: 100
     }
   }

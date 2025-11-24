@@ -65,38 +65,39 @@ const SettingsView: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Load settings from database
-      const settingsData = await Promise.all([
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['geminiApiKey']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['openaiApiKey']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['imageProvider']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['notificationsEnabled']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['notificationSound']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['notificationVolume']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['widgetOpacity']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['widgetAlwaysOnTop']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['theme']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['language']),
-        window.electronAPI.database.query('SELECT value FROM settings WHERE key = ?', ['fontSize'])
-      ]);
+      const keys = [
+        'geminiApiKey',
+        'openaiApiKey',
+        'imageProvider',
+        'notificationsEnabled',
+        'notificationSound',
+        'notificationVolume',
+        'widgetOpacity',
+        'widgetAlwaysOnTop',
+        'theme',
+        'language',
+        'fontSize'
+      ];
+      const settingsData = await window.electronAPI.settings.getMany(keys);
+      const values = settingsData?.success && settingsData.values ? settingsData.values : {};
 
       setSettings({
-        geminiApiKey: settingsData[0][0]?.value || '',
-        openaiApiKey: settingsData[1][0]?.value || '',
-        imageProvider: settingsData[2][0]?.value === 'openai' ? 'openai' : 'gemini',
-        notificationsEnabled: settingsData[3][0]?.value === 'true',
-        notificationSound: settingsData[4][0]?.value !== 'false',
-        notificationVolume: parseInt(settingsData[5][0]?.value || '50'),
-        widgetOpacity: parseInt(settingsData[6][0]?.value || '90'),
-        widgetAlwaysOnTop: settingsData[7][0]?.value !== 'false',
-        theme: (settingsData[8][0]?.value as 'light' | 'dark' | 'system') || 'light',
-        language: (settingsData[9][0]?.value as 'ja' | 'en') || 'ja',
-        fontSize: (settingsData[10][0]?.value as 'small' | 'medium' | 'large') || 'medium'
+        geminiApiKey: values.geminiApiKey || '',
+        openaiApiKey: values.openaiApiKey || '',
+        imageProvider: values.imageProvider === 'openai' ? 'openai' : 'gemini',
+        notificationsEnabled: values.notificationsEnabled === 'true',
+        notificationSound: values.notificationSound !== 'false',
+        notificationVolume: parseInt(values.notificationVolume || '50'),
+        widgetOpacity: parseInt(values.widgetOpacity || '90'),
+        widgetAlwaysOnTop: values.widgetAlwaysOnTop !== 'false',
+        theme: (values.theme as 'light' | 'dark' | 'system') || 'light',
+        language: (values.language as 'ja' | 'en') || 'ja',
+        fontSize: (values.fontSize as 'small' | 'medium' | 'large') || 'medium'
       });
 
       // メインプロセスへ適用
       if (window.electronAPI.ai?.setProvider) {
-        await window.electronAPI.ai.setProvider(settingsData[2][0]?.value === 'openai' ? 'openai' : 'gemini');
+        await window.electronAPI.ai.setProvider(values.imageProvider === 'openai' ? 'openai' : 'gemini');
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -122,12 +123,10 @@ const SettingsView: React.FC = () => {
           return;
         }
         
-        if (window.electronAPI?.settings) {
-          const result = await window.electronAPI.settings.setApiKey(validatedSettings.geminiApiKey.trim());
-          if (!result.success) {
-            alert(`APIキーの設定に失敗しました: ${result.error}`);
-            return;
-          }
+        const result = await window.electronAPI.settings.setApiKey(validatedSettings.geminiApiKey.trim());
+        if (!result.success) {
+          alert(`APIキーの設定に失敗しました: ${result.error}`);
+          return;
         }
       }
 
@@ -139,23 +138,20 @@ const SettingsView: React.FC = () => {
           alert(`OpenAI APIキーの形式が無効です: ${error instanceof Error ? error.message : 'Unknown error'}`);
           return;
         }
-        if (window.electronAPI?.settings) {
-          const result = await window.electronAPI.settings.setOpenAIApiKey(validatedSettings.openaiApiKey.trim());
-          if (!result.success) {
-            alert(`OpenAI APIキーの設定に失敗しました: ${result.error}`);
-            return;
-          }
+        const result = await window.electronAPI.settings.setOpenAIApiKey(validatedSettings.openaiApiKey.trim());
+        if (!result.success) {
+          alert(`OpenAI APIキーの設定に失敗しました: ${result.error}`);
+          return;
         }
       }
       
-      // 他の設定をデータベースに保存（APIキー以外）
+      // その他設定をまとめて保存（APIキー以外）
       const settingsEntries = Object.entries(validatedSettings).filter(([key]) => key !== 'geminiApiKey' && key !== 'openaiApiKey' && key !== 'imageProvider');
-      for (const [key, value] of settingsEntries) {
-        await window.electronAPI.database.query(
-          'INSERT OR REPLACE INTO settings (key, value, updatedAt) VALUES (?, ?, ?)',
-          [key, String(value), new Date().toISOString()]
-        );
-      }
+      const settingsObject = settingsEntries.reduce<Record<string, string>>((acc, [key, value]) => {
+        acc[key] = String(value);
+        return acc;
+      }, {});
+      await window.electronAPI.settings.setMany(settingsObject);
 
       // プロバイダ選択を保存
       if (window.electronAPI.ai?.setProvider) {
@@ -284,10 +280,8 @@ const SettingsView: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (confirm('APIキーを削除しますか？')) {
-                          if (window.electronAPI?.settings) {
-                            await window.electronAPI.settings.clearApiKey();
-                            setSettings(prev => ({ ...prev, geminiApiKey: '' }));
-                          }
+                          await window.electronAPI.settings.clearApiKey();
+                          setSettings(prev => ({ ...prev, geminiApiKey: '' }));
                         }
                       }}
                       className="text-red-600 hover:text-red-700 text-sm"
@@ -342,10 +336,8 @@ const SettingsView: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (confirm('OpenAI APIキーを削除しますか？')) {
-                          if (window.electronAPI?.settings) {
-                            await window.electronAPI.settings.clearOpenAIApiKey();
-                            setSettings(prev => ({ ...prev, openaiApiKey: '' }));
-                          }
+                          await window.electronAPI.settings.clearOpenAIApiKey();
+                          setSettings(prev => ({ ...prev, openaiApiKey: '' }));
                         }
                       }}
                       className="text-red-600 hover:text-red-700 text-sm"

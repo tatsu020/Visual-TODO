@@ -2,7 +2,6 @@ export interface Task {
   id?: number;
   title: string;
   description?: string;
-  category: string;
   status: 'pending' | 'inProgress' | 'completed' | 'paused';
   type: 'immediate' | 'recurring' | 'scheduled';
   scheduledTime?: string;
@@ -13,6 +12,9 @@ export interface Task {
   imageUrl?: string;
   recurringPattern?: string;
   dueDate?: string;
+  location?: string;
+  priority?: TaskPriority;
+  scheduledTimeEnd?: string;
 }
 
 export interface TaskStep {
@@ -54,12 +56,14 @@ export interface Settings {
 export interface TaskFormData {
   title: string;
   description: string;
-  category: string;
-  type: 'immediate' | 'recurring' | 'scheduled';
+  type?: 'immediate' | 'recurring' | 'scheduled';
   scheduledTime?: string;
   estimatedDuration?: number;
   recurringPattern?: string;
   dueDate?: string;
+  location?: string;
+  priority?: TaskPriority;
+  scheduledTimeEnd?: string;
 }
 
 export interface UserProfileFormData {
@@ -76,17 +80,7 @@ export interface AIImageGenerationParams {
   size?: '256x256' | '384x256' | '512x512' | '1024x1024';
 }
 
-export type TaskCategory = 
-  | 'work'
-  | 'health'
-  | 'study'
-  | 'hobby'
-  | 'household'
-  | 'social'
-  | 'finance'
-  | 'general';
-
-export type ArtStyle = 
+export type ArtStyle =
   | 'anime'
   | 'realistic'
   | 'watercolor'
@@ -97,6 +91,7 @@ export type ArtStyle =
 
 export type TaskStatus = 'pending' | 'inProgress' | 'completed' | 'paused';
 export type TaskType = 'immediate' | 'recurring' | 'scheduled';
+export type TaskPriority = 'high' | 'medium' | 'low';
 
 export interface TaskStats {
   total: number;
@@ -105,14 +100,6 @@ export interface TaskStats {
   inProgress: number;
   paused: number;
   completionRate: number;
-}
-
-export interface CategoryStats {
-  [category: string]: {
-    total: number;
-    completed: number;
-    completionRate: number;
-  };
 }
 
 declare global {
@@ -125,9 +112,6 @@ declare global {
         get: (key: string) => Promise<any>;
         set: (key: string, value: any) => Promise<void>;
       };
-      database: {
-        query: (query: string, params?: any[]) => Promise<any>;
-      };
       dialog: {
         openFile: (filters?: any[]) => Promise<any>;
       };
@@ -139,10 +123,6 @@ declare global {
         hide: () => Promise<void>;
         toggle: () => Promise<void>;
       };
-      gemini?: {
-        initialize: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
-        generateImage: (options: { prompt: string; style?: string; size?: string }) => Promise<any>;
-      };
       ai?: {
         generateTaskImage: (taskTitle: string, taskDescription: string, userDescription: string, options?: any, taskId?: number) => Promise<{ success: boolean; imageUrl?: string; error?: string }>;
         regenerateTaskImage: (taskId: number) => Promise<{ success: boolean; imageUrl?: string; error?: string }>;
@@ -150,17 +130,33 @@ declare global {
         getImageUrlByTaskId: (taskId: number) => Promise<{ success: boolean; imageUrl?: string; error?: string }>;
         setProvider: (provider: 'gemini' | 'openai') => Promise<{ success: boolean; error?: string }>;
         getProvider: () => Promise<'gemini' | 'openai'>;
+        getCacheDir: () => Promise<string>;
       };
-      settings?: {
+      tasks: {
+        list: (filter?: { status?: string; orderByPriority?: boolean }) => Promise<{ success: boolean; tasks?: Task[] }>;
+        listForWidget: () => Promise<{ success: boolean; tasks?: Task[] }>;
+        create: (task: any) => Promise<{ success: boolean; task?: Task; error?: string }>;
+        update: (id: number, updates: Partial<Task>) => Promise<{ success: boolean; error?: string }>;
+        delete: (id: number) => Promise<{ success: boolean; error?: string }>;
+        getWithSteps: (taskId: number) => Promise<{ success: boolean; task?: TaskWithSteps | null; error?: string }>;
+      };
+      userProfile: {
+        get: () => Promise<{ success: boolean; profile?: UserProfile | null; error?: string }>;
+        save: (profile: any) => Promise<{ success: boolean; error?: string }>;
+      };
+      settings: {
         setApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
         hasApiKey: () => Promise<boolean>;
         clearApiKey: () => Promise<{ success: boolean; error?: string }>;
         setOpenAIApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
         hasOpenAIApiKey: () => Promise<boolean>;
         clearOpenAIApiKey: () => Promise<{ success: boolean; error?: string }>;
+        getMany: (keys: string[]) => Promise<{ success: boolean; values?: Record<string, string | null>; error?: string }>;
+        setMany: (entries: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
       };
       taskSteps?: {
         getByTaskId: (taskId: number) => Promise<{ success: boolean; steps: any[] }>;
+        create: (step: any) => Promise<{ success: boolean; error?: string }>;
       };
       on: (channel: string, callback: Function) => void;
       removeAllListeners: (channel: string) => void;

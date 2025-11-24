@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, Tag, Edit, Save } from 'lucide-react';
+import { X, Calendar, Clock, Edit, Save } from 'lucide-react';
 import { Task, TaskWithSteps, TaskStep } from '../types';
 import { useTask } from '../contexts/TaskContext';
 import { TaskStepsManager } from './TaskStepsManager';
@@ -10,10 +10,10 @@ interface TaskDetailViewProps {
   onTaskUpdate?: (updatedTask: Task) => void;
 }
 
-export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ 
-  task, 
-  onClose, 
-  onTaskUpdate 
+export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
+  task,
+  onClose,
+  onTaskUpdate
 }) => {
   const { updateTask } = useTask();
   const [taskWithSteps, setTaskWithSteps] = useState<TaskWithSteps | null>(null);
@@ -28,7 +28,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   // タスクとステップの詳細データを読み込み
   const loadTaskWithSteps = async () => {
     if (!task.id) return;
-    
+
     setIsLoading(true);
     try {
       const result = await electronAPI.tasks.getWithSteps(task.id);
@@ -58,20 +58,19 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   // タスクの基本情報を更新
   const handleTaskUpdate = async () => {
     if (!task.id) return;
-    
+
     setIsSaving(true);
     try {
       await updateTask(task.id, {
         title: editedTask.title,
         description: editedTask.description,
-        category: editedTask.category,
         type: editedTask.type,
         scheduledTime: editedTask.scheduledTime,
         estimatedDuration: editedTask.estimatedDuration,
         dueDate: editedTask.dueDate,
         recurringPattern: editedTask.recurringPattern
       });
-      
+
       // 親コンポーネントに更新を通知
       onTaskUpdate?.(editedTask);
       setIsEditing(false);
@@ -86,13 +85,13 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   // ステップ変更時のコールバック
   const handleStepsChange = (updatedSteps: TaskStep[]) => {
     setSteps(updatedSteps);
-    
+
     // タスクWithStepsの進捗情報を更新
     if (taskWithSteps) {
       const completedSteps = updatedSteps.filter(step => step.status === 'completed').length;
       const totalSteps = updatedSteps.length;
       const stepProgress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-      
+
       setTaskWithSteps({
         ...taskWithSteps,
         steps: updatedSteps,
@@ -252,11 +251,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
               {/* メタデータ */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <h3 className="font-medium text-gray-900">タスク情報</h3>
-                
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Tag className="w-4 h-4" />
-                  <span>カテゴリ: {task.category}</span>
-                </div>
 
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Clock className="w-4 h-4" />
@@ -292,7 +286,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                       <span className="font-medium text-blue-900">{taskWithSteps.stepProgress}%</span>
                     </div>
                     <div className="w-full bg-blue-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${taskWithSteps.stepProgress}%` }}
                       />

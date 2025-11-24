@@ -13,7 +13,7 @@ const CrumpleOverlay: React.FC<CrumpleOverlayProps> = ({ task, isActive, onCompl
   useEffect(() => {
     if (isActive && task) {
       setIsAnimating(true);
-      
+
       // Complete animation after 800ms
       const timer = setTimeout(() => {
         setIsAnimating(false);
@@ -33,10 +33,9 @@ const CrumpleOverlay: React.FC<CrumpleOverlayProps> = ({ task, isActive, onCompl
       {/* Position over the trash bin */}
       <div className="relative w-80 h-80 flex items-center justify-center">
         {/* Animated task representation */}
-        <div 
-          className={`absolute w-48 max-w-xs transition-all duration-800 ${
-            isAnimating ? 'animate-completion-crumple' : ''
-          }`}
+        <div
+          className={`absolute w-48 max-w-xs transition-all duration-800 ${isAnimating ? 'animate-completion-crumple' : ''
+            }`}
           style={{
             background: 'linear-gradient(145deg, #c5e1a5 0%, #aed581 50%, #9ccc65 100%)',
             borderRadius: '3px',
@@ -48,13 +47,10 @@ const CrumpleOverlay: React.FC<CrumpleOverlayProps> = ({ task, isActive, onCompl
           <div className="text-sm font-semibold text-gray-800 mb-2 truncate">
             {task.title}
           </div>
-          <div className="text-xs text-gray-600 mb-2">
-            {task.category}
-          </div>
           {task.imageUrl && (
             <div className="w-full h-16 bg-gray-100 rounded overflow-hidden">
-              <img 
-                src={task.imageUrl} 
+              <img
+                src={task.imageUrl}
                 alt="Task illustration"
                 className="w-full h-full object-cover"
               />
@@ -69,7 +65,7 @@ const CrumpleOverlay: React.FC<CrumpleOverlayProps> = ({ task, isActive, onCompl
             <div className="absolute top-8 right-8 w-1 h-1 bg-yellow-400 rounded-full animate-ping animation-delay-200"></div>
             <div className="absolute bottom-12 left-8 w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping animation-delay-400"></div>
             <div className="absolute bottom-4 right-4 w-2 h-2 bg-green-500 rounded-full animate-ping animation-delay-600"></div>
-            
+
             {/* Completion checkmark */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center animate-bounce-in animation-delay-400">

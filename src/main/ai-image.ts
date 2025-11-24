@@ -10,6 +10,7 @@ export interface ImageGenerationOptions {
   referenceImagePath?: string;
   style: string;
   size?: '256x256' | '384x256' | '512x512' | '1024x1024';
+  location?: string;
 }
 
 export enum AIImageErrorType {
@@ -39,11 +40,13 @@ export class AIImageGenerator {
   private provider: 'gemini' | 'openai' = 'gemini';
   private database: DatabaseManager;
   private cacheDir: string;
+  private onProgress?: (progress: { stage: string; percent: number; message: string }) => void;
 
-  constructor(database: DatabaseManager) {
+  constructor(database: DatabaseManager, onProgress?: (progress: { stage: string; percent: number; message: string }) => void) {
     this.database = database;
     this.cacheDir = join(app.getPath('userData'), 'images');
-    
+    this.onProgress = onProgress;
+
     if (!existsSync(this.cacheDir)) {
       mkdirSync(this.cacheDir, { recursive: true });
       console.log('📁 画像キャッシュディレクトリを作成:', this.cacheDir);
@@ -86,12 +89,12 @@ export class AIImageGenerator {
     try {
       const files = readdirSync(this.cacheDir);
       const imageFiles = files.filter(file => file.endsWith('.png'));
-      
+
       console.log('🗄️ 画像キャッシュ状況:');
       console.log(`  - キャッシュディレクトリ: ${this.cacheDir}`);
       console.log(`  - 保存済み画像ファイル数: ${imageFiles.length}`);
       console.log(`  - メモリキャッシュサイズ: ${this.memoryCache.size}/${this.MAX_CACHE_SIZE}`);
-      
+
       if (imageFiles.length > 0) {
         console.log('  - 最新の画像ファイル:');
         imageFiles.slice(0, 3).forEach(file => {
@@ -99,7 +102,7 @@ export class AIImageGenerator {
           const stats = require('fs').statSync(filePath);
           console.log(`    * ${file} (${Math.round(stats.size / 1024)}KB)`);
         });
-        
+
         // 既存ファイルからマッピングを復元
         this.rebuildMappingFromFiles(imageFiles);
       }
@@ -113,19 +116,19 @@ export class AIImageGenerator {
     try {
       console.log('🔄 既存ファイルからマッピングを復元中...');
       let restoredCount = 0;
-      
+
       imageFiles.forEach(fileName => {
         // ファイル名からキャッシュキーを抽出（例: gemini_task_1234567890_abcd1234_taskname.png）
         const match = fileName.match(/gemini_task_\d+_([a-zA-Z0-9]{8})/);
         if (match) {
           const keyFragment = match[1];
-          
+
           // キャッシュキーの断片から完全なキーを復元（データベースから検索）
           this.restoreCacheKeyFromFragment(keyFragment, fileName);
           restoredCount++;
         }
       });
-      
+
       console.log(`✅ マッピング復元完了: ${restoredCount}個のファイルを処理`);
     } catch (error) {
       console.warn('⚠️ マッピング復元エラー:', error);
@@ -136,36 +139,36 @@ export class AIImageGenerator {
   public async restoreMappingsFromDatabase(database: any): Promise<void> {
     try {
       console.log('🔄 データベースからマッピングを復元中...');
-      
+
       const tasks = await database.query('SELECT id, title, description, imageUrl FROM tasks WHERE imageUrl IS NOT NULL');
       let restoredCount = 0;
       let repairedCount = 0;
       console.log(`📊 復元対象タスク数: ${tasks.length}`);
-      
+
       // ユーザープロファイルを一度だけ取得
       const userProfileResult = await database.query('SELECT description, artStyle FROM user_profiles LIMIT 1');
       const userDescription = userProfileResult.length > 0 ? userProfileResult[0].description || '' : '';
       const artStyle = userProfileResult.length > 0 ? userProfileResult[0].artStyle || 'anime' : 'anime';
       console.log(`👤 ユーザープロファイル: ${userDescription}, スタイル: ${artStyle}`);
-      
+
       for (const task of tasks) {
         if (task.imageUrl && task.imageUrl.startsWith('data:image')) {
           console.log(`🔄 復元処理中: TaskID ${task.id}, タイトル: "${task.title}"`);
-          
+
           // タスク情報からキャッシュキーを再生成（参照画像は当時不明のため含めない）
           const cacheKey = this.generateCacheKey(task.title, task.description || '', userDescription, artStyle, undefined);
           console.log(`🔑 生成されたキャッシュキー: ${cacheKey}`);
-          
+
           // 🩹 破損した画像データの修復チェック
           const isCorrupted = this.isImageDataCorrupted(task.imageUrl);
           if (isCorrupted) {
             console.log(`🚨 破損画像検出 - TaskID ${task.id}: ${isCorrupted}`);
-            
+
             // ファイルキャッシュから完全なデータを復元試行
             const repairedImageUrl = await this.repairImageFromCache(cacheKey, task.title);
             if (repairedImageUrl) {
               console.log(`🩹 画像修復成功 - TaskID ${task.id}`);
-              
+
               // データベースを更新
               await database.query('UPDATE tasks SET imageUrl = ? WHERE id = ?', [repairedImageUrl, task.id]);
               await this.setCachedImage(cacheKey, repairedImageUrl);
@@ -178,15 +181,15 @@ export class AIImageGenerator {
             // 正常なデータはそのまま使用
             await this.setCachedImage(cacheKey, task.imageUrl);
           }
-          
+
           this.taskIdMapping.set(task.id, cacheKey);
           console.log(`✅ TaskID ${task.id} -> キャッシュキー ${cacheKey.substring(0, 12)}... (メモリキャッシュ)`);
-          
+
           // ファイルキャッシュとの関連付けを試行（オプション、失敗しても画像表示に影響なし）
           try {
             const files = readdirSync(this.cacheDir);
             const matchingFile = files.find(file => file.includes(cacheKey.substring(0, 8)));
-            
+
             if (matchingFile) {
               this.taskImageMapping.set(cacheKey, matchingFile);
               console.log(`📎 ファイル関連付け: ${matchingFile}`);
@@ -196,13 +199,13 @@ export class AIImageGenerator {
           } catch (fileError) {
             console.warn(`⚠️ ファイル関連付けに失敗（画像表示には影響なし）:`, fileError);
           }
-          
+
           restoredCount++;
         } else {
           console.log(`⏭️ スキップ: TaskID ${task.id} (imageUrl無効または空)`);
         }
       }
-      
+
       console.log(`✅ データベースからのマッピング復元完了: ${restoredCount}個のタスク`);
       if (repairedCount > 0) {
         console.log(`🩹 画像修復完了: ${repairedCount}個のタスク`);
@@ -221,14 +224,14 @@ export class AIImageGenerator {
       if (!imageUrl.startsWith('data:image/')) {
         return 'data:URLフォーマットではありません';
       }
-      
+
       const headerMatch = imageUrl.match(/^data:([^;]+);base64,/);
       if (!headerMatch) {
         return 'base64ヘッダーが無効です';
       }
-      
+
       const base64Data = imageUrl.substring(headerMatch[0].length);
-      
+
       // PNG画像の場合、終端チェック
       if (headerMatch[1] === 'image/png') {
         const buffer = Buffer.from(base64Data, 'base64');
@@ -237,7 +240,7 @@ export class AIImageGenerator {
           return 'PNG終端チャンクが不完全です';
         }
       }
-      
+
       return null; // 破損なし
     } catch (error) {
       return `データ解析エラー: ${error instanceof Error ? error.message : 'unknown'}`;
@@ -248,30 +251,30 @@ export class AIImageGenerator {
   private async repairImageFromCache(cacheKey: string, taskTitle: string): Promise<string | null> {
     try {
       const files = readdirSync(this.cacheDir);
-      
+
       // キャッシュキーまたはタスクタイトルにマッチするファイルを探す
-      const matchingFiles = files.filter(file => 
-        file.includes(cacheKey.substring(0, 8)) || 
+      const matchingFiles = files.filter(file =>
+        file.includes(cacheKey.substring(0, 8)) ||
         file.includes(taskTitle.replace(/[^\w]/g, '_'))
       );
-      
+
       if (matchingFiles.length === 0) {
         console.warn(`⚠️ 修復用ファイルが見つかりません: ${taskTitle}`);
         return null;
       }
-      
+
       // 最新のファイルを使用
       const latestFile = matchingFiles.sort().reverse()[0];
       const filePath = join(this.cacheDir, latestFile);
-      
+
       console.log(`📁 修復用ファイル: ${latestFile}`);
-      
+
       const imageBuffer = readFileSync(filePath);
       const base64Data = imageBuffer.toString('base64');
       const repairedImageUrl = `data:image/png;base64,${base64Data}`;
-      
+
       console.log(`🩹 修復された画像サイズ: ${repairedImageUrl.length}文字`);
-      
+
       return repairedImageUrl;
     } catch (error) {
       console.error(`❌ 画像修復エラー:`, error);
@@ -321,6 +324,10 @@ export class AIImageGenerator {
     return this.provider;
   }
 
+  getCacheDir(): string {
+    return this.cacheDir;
+  }
+
   async generateTaskImage(
     taskTitle: string,
     taskDescription: string,
@@ -345,21 +352,21 @@ export class AIImageGenerator {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`🎨 AI画像生成試行 ${attempt}/${maxRetries} - タスク: ${taskTitle}`);
-        
+
         const result = await this.attemptImageGeneration(taskTitle, taskDescription, userDescription, options, taskId);
-        
+
         if (result.success) {
           console.log(`✅ AI画像生成成功 (試行 ${attempt}/${maxRetries})`);
           return result;
         } else {
           lastError = result.error;
-          
+
           // リトライ可能なエラーかチェック
           if (!result.error.retryable || attempt === maxRetries) {
             console.log(`❌ AI画像生成失敗 - リトライ不可またはリトライ上限: ${result.error.userMessage}`);
             return result;
           }
-          
+
           // リトライ前の待機時間（指数バックオフ）
           const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
           console.log(`⏳ ${waitTime}ms待機後にリトライします...`);
@@ -367,21 +374,21 @@ export class AIImageGenerator {
         }
       } catch (error) {
         lastError = this.analyzeError(error, `${taskTitle} (試行 ${attempt})`);
-        
+
         if (!lastError.retryable || attempt === maxRetries) {
           console.error(`❌ AI画像生成で予期しないエラー (試行 ${attempt}/${maxRetries}):`, error);
           return { success: false, error: lastError };
         }
-        
+
         const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
         console.log(`⏳ エラー後 ${waitTime}ms待機してリトライします...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
 
-    return { 
-      success: false, 
-      error: lastError || this.createError(AIImageErrorType.UNKNOWN_ERROR, 'All retry attempts failed') 
+    return {
+      success: false,
+      error: lastError || this.createError(AIImageErrorType.UNKNOWN_ERROR, 'All retry attempts failed')
     };
   }
 
@@ -392,6 +399,9 @@ export class AIImageGenerator {
     options: Partial<ImageGenerationOptions>,
     taskId?: number
   ): Promise<{ success: true; imageUrl: string } | { success: false; error: AIImageError }> {
+    // 進行度: プロンプト構築開始
+    this.onProgress?.({ stage: 'preparing', percent: 10, message: 'プロンプトを準備中...' });
+
     // 毎回新規生成に切り替え（キャッシュは参照しない）
     const cacheKey = this.generateCacheKey(
       taskTitle,
@@ -401,11 +411,11 @@ export class AIImageGenerator {
       options.referenceImagePath
     );
 
-    const prompt = this.buildPrompt(taskTitle, taskDescription, userDescription, options.style || 'anime', undefined);
-    
+    const prompt = this.buildPrompt(taskTitle, taskDescription, userDescription, options.style || 'anime', options, options.referenceImagePath);
+
     console.log('🎯 プロンプト:', prompt);
     console.log('📊 入力パラメータ:', { taskTitle, taskDescription, userDescription, options });
-    
+
     // AbortControllerでタイムアウト管理を改善（プロバイダ別）
     const controller = new AbortController();
     const timeoutMs = this.provider === 'openai' ? 240000 : 25000; // OpenAIは生成が重めのため長め
@@ -414,6 +424,9 @@ export class AIImageGenerator {
     try {
       // OpenAI(gpt-image-1)を利用する場合
       if (this.provider === 'openai') {
+        // 進行度: OpenAI API呼び出し開始
+        this.onProgress?.({ stage: 'generating', percent: 30, message: 'OpenAIで画像を生成中...' });
+
         if (!this.openai) {
           return {
             success: false,
@@ -435,7 +448,7 @@ export class AIImageGenerator {
                 else if (ratio < 0.8) size = '1024x1536';
                 else size = '1024x1024';
               }
-            } catch {}
+            } catch { }
           }
 
           let b64: string | undefined;
@@ -452,8 +465,8 @@ export class AIImageGenerator {
                 const ext = path.extname(options.referenceImagePath).toLowerCase();
                 const contentType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
                   : ext === '.png' ? 'image/png'
-                  : ext === '.webp' ? 'image/webp'
-                  : undefined;
+                    : ext === '.webp' ? 'image/webp'
+                      : undefined;
                 // ReadableStreamの再利用による空読みを避けるため、毎回新しいストリームからFileLikeを生成
                 const makeFileLike = async () => {
                   const stream = fs.createReadStream(options.referenceImagePath);
@@ -537,6 +550,9 @@ export class AIImageGenerator {
 
           clearTimeout(timeoutId);
 
+          // 進行度: レスポンス受信完了
+          this.onProgress?.({ stage: 'processing', percent: 70, message: '画像を処理中...' });
+
           if (!b64 && !url) {
             return {
               success: false,
@@ -564,6 +580,8 @@ export class AIImageGenerator {
           const base64DataUrl = await this.saveImageToCache(imageBuffer, taskTitle, cacheKey, taskId);
           // 生のbase64はログに出さない
           console.log('💾 ファイル保存完了: [data:image/*;base64, ...redacted]');
+          // 進行度: 保存完了
+          this.onProgress?.({ stage: 'complete', percent: 100, message: '画像生成が完了しました' });
           return { success: true, imageUrl: base64DataUrl };
         } catch (openaiError) {
           clearTimeout(timeoutId);
@@ -590,8 +608,8 @@ export class AIImageGenerator {
             const ext = path.extname(options.referenceImagePath).toLowerCase();
             const mimeType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
               : ext === '.png' ? 'image/png'
-              : ext === '.webp' ? 'image/webp'
-              : 'application/octet-stream';
+                : ext === '.webp' ? 'image/webp'
+                  : 'application/octet-stream';
             contents.push({
               inlineData: {
                 data: base64,
@@ -611,32 +629,80 @@ export class AIImageGenerator {
         console.warn('参照画像の読み込みに失敗。テキストのみで続行します:', e);
       }
 
+      // 進行度: Gemini API呼び出し開始
+      this.onProgress?.({ stage: 'generating', percent: 30, message: 'Geminiで画像を生成中...' });
+
       const result = await this.genAI!.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-2.5-flash-image",
         contents,
         config: {
-          responseModalities: ["TEXT", "IMAGE"]
+          responseModalities: ["IMAGE"]
         }
       });
 
       clearTimeout(timeoutId);
 
+      // 進行度: レスポンス受信完了
+      this.onProgress?.({ stage: 'processing', percent: 70, message: '画像を処理中...' });
+
       // レスポンス構造をログに出力
       console.log('📋 APIレスポンス構造:', {
         candidates: result.candidates?.length || 0,
         modelVersion: result.modelVersion,
-        usageMetadata: result.usageMetadata
+        usageMetadata: result.usageMetadata,
+        hasPromptFeedback: !!result.promptFeedback
       });
 
+      // promptFeedbackをチェック（プロンプトが拒否された場合）
+      if (result.promptFeedback?.blockReason) {
+        const blockReason = result.promptFeedback.blockReason.toUpperCase();
+        console.warn(`⚠️ プロンプトが拒否されました (blockReason: ${result.promptFeedback.blockReason})`);
+        return {
+          success: false,
+          error: this.createError(
+            AIImageErrorType.CONTENT_VIOLATION,
+            'プロンプトがコンテンツポリシーに違反しているため、画像生成が拒否されました',
+            { blockReason: result.promptFeedback.blockReason, safetyRatings: result.promptFeedback.safetyRatings }
+          )
+        };
+      }
+
       // 画像データの抽出とキャッシュ保存
-      if (result.candidates) {
+      if (result.candidates && result.candidates.length > 0) {
         for (const candidate of result.candidates) {
           console.log('🔍 候補をチェック中:', {
             hasContent: !!candidate.content,
             hasParts: !!candidate.content?.parts,
-            partsCount: candidate.content?.parts?.length || 0
+            partsCount: candidate.content?.parts?.length || 0,
+            finishReason: candidate.finishReason
           });
-          
+
+          // finishReasonをチェック（gemini-2.5-flash-imageモデルで使用される可能性がある）
+          if (candidate.finishReason) {
+            const finishReason = candidate.finishReason.toUpperCase();
+            if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
+              console.warn(`⚠️ 画像生成が拒否されました (finishReason: ${candidate.finishReason})`);
+              return {
+                success: false,
+                error: this.createError(
+                  AIImageErrorType.CONTENT_VIOLATION,
+                  'コンテンツポリシーにより画像生成が拒否されました',
+                  { finishReason: candidate.finishReason, safetyRatings: candidate.safetyRatings }
+                )
+              };
+            } else if (finishReason === 'MAX_TOKENS' || finishReason === 'OTHER') {
+              console.warn(`⚠️ 画像生成が完了しませんでした (finishReason: ${candidate.finishReason})`);
+              return {
+                success: false,
+                error: this.createError(
+                  AIImageErrorType.SERVICE_UNAVAILABLE,
+                  '画像生成が正常に完了しませんでした',
+                  { finishReason: candidate.finishReason }
+                )
+              };
+            }
+          }
+
           if (candidate.content && candidate.content.parts) {
             for (let i = 0; i < candidate.content.parts.length; i++) {
               const part = candidate.content.parts[i];
@@ -646,19 +712,48 @@ export class AIImageGenerator {
                 mimeType: part.inlineData?.mimeType,
                 dataLength: part.inlineData?.data?.length
               });
-              
+
+              // テキストコンテンツが返された場合のエラーハンドリング
+              // responseModalities: ["IMAGE"]を指定していても、エラー時やフィルタリング時にテキストが返される可能性がある
+              if (part.text && !part.inlineData) {
+                console.warn('⚠️ APIがテキストレスポンスを返しました（画像生成が拒否された可能性）:', part.text);
+                // テキストメッセージからエラータイプを推測
+                const textLower = part.text.toLowerCase();
+                let errorType = AIImageErrorType.CONTENT_VIOLATION;
+                let errorMessage = part.text;
+                
+                if (textLower.includes('safety') || textLower.includes('policy') || textLower.includes('violation')) {
+                  errorType = AIImageErrorType.CONTENT_VIOLATION;
+                  errorMessage = 'コンテンツポリシーにより画像生成が拒否されました';
+                } else if (textLower.includes('quota') || textLower.includes('limit')) {
+                  errorType = AIImageErrorType.QUOTA_EXCEEDED;
+                  errorMessage = 'APIクォータを超過しました';
+                } else if (textLower.includes('invalid') || textLower.includes('error')) {
+                  errorType = AIImageErrorType.INVALID_PROMPT;
+                  errorMessage = '無効なプロンプトが検出されました';
+                }
+                
+                return {
+                  success: false,
+                  error: this.createError(errorType, errorMessage, { apiResponse: part.text })
+                };
+              }
+
               if (part.inlineData && part.inlineData.data) {
                 try {
                   const imageBuffer = Buffer.from(part.inlineData.data, 'base64');
                   console.log('✅ 画像データを発見、処理中...');
-                  
+
                   // 1. キャッシュキーを使ってファイル保存とマッピング更新
                   const base64DataUrl = await this.saveImageToCache(imageBuffer, taskTitle, cacheKey, taskId);
                   console.log('💾 ファイル保存完了: [data:image/*;base64, ...redacted]');
-                  
+
+                  // 進行度: 保存完了
+                  this.onProgress?.({ stage: 'complete', percent: 100, message: '画像生成が完了しました' });
+
                   console.log('🔗 画像URL生成完了');
                   console.log('📊 データサイズ:', Math.round(part.inlineData.data.length / 1024), 'KB (base64)');
-                  
+
                   // 3. base64データURLを直接返す（データベース保存用）
                   return { success: true, imageUrl: base64DataUrl };
                 } catch (saveError) {
@@ -674,27 +769,66 @@ export class AIImageGenerator {
         }
       }
 
+      // 画像データが見つからなかった場合のエラーハンドリング
       console.warn('❌ Gemini APIから画像データを受信できませんでした');
+      
+      // より詳細なエラー情報を収集
+      const errorDetails: any = {
+        candidatesCount: result.candidates?.length || 0,
+        modelVersion: result.modelVersion
+      };
+      
+      // 候補が存在するが画像データがない場合の詳細情報
+      if (result.candidates && result.candidates.length > 0) {
+        const firstCandidate = result.candidates[0];
+        errorDetails.finishReason = firstCandidate.finishReason;
+        errorDetails.hasContent = !!firstCandidate.content;
+        errorDetails.partsCount = firstCandidate.content?.parts?.length || 0;
+        
+        // テキストコンテンツが含まれているかチェック
+        const textParts = firstCandidate.content?.parts?.filter(p => p.text) || [];
+        if (textParts.length > 0) {
+          errorDetails.textContent = textParts.map(p => p.text).join(' ');
+        }
+      }
+      
       try {
         const redacted = this.redactBase64InObject(result);
         console.log('📝 レスポンス詳細(一部伏せ字):', JSON.stringify(redacted, null, 2));
       } catch {
         console.log('📝 レスポンス詳細(表示省略: サニタイズ失敗)');
       }
+      
+      // エラータイプを推測
+      let errorType = AIImageErrorType.SERVICE_UNAVAILABLE;
+      let errorMessage = '画像データを受信できませんでした';
+      
+      if (errorDetails.finishReason === 'SAFETY' || errorDetails.finishReason === 'RECITATION') {
+        errorType = AIImageErrorType.CONTENT_VIOLATION;
+        errorMessage = 'コンテンツポリシーにより画像生成が拒否されました';
+      } else if (errorDetails.textContent) {
+        // テキストコンテンツが含まれている場合、エラーメッセージとして使用
+        errorMessage = `APIエラー: ${errorDetails.textContent.substring(0, 200)}`;
+        if (errorDetails.textContent.toLowerCase().includes('safety') || 
+            errorDetails.textContent.toLowerCase().includes('policy')) {
+          errorType = AIImageErrorType.CONTENT_VIOLATION;
+        }
+      }
+      
       return {
         success: false,
-        error: this.createError(AIImageErrorType.SERVICE_UNAVAILABLE, 'No image data received from API')
+        error: this.createError(errorType, errorMessage, errorDetails)
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (controller.signal.aborted) {
         return {
           success: false,
           error: this.createError(AIImageErrorType.NETWORK_ERROR, 'API request timeout')
         };
       }
-      
+
       throw error;
     }
   }
@@ -704,6 +838,7 @@ export class AIImageGenerator {
     taskDescription: string,
     userDescription: string,
     style: string,
+    options: Partial<ImageGenerationOptions> = {},
     referenceImagePath?: string
   ): string {
     // スタイル拡張（小サムネでも視認性の高いテイストを優先）
@@ -722,8 +857,18 @@ export class AIImageGenerator {
     const parts: string[] = [];
     parts.push('High-quality illustration for a visual to-do app.');
 
-    const taskLine = `Depict a single person actively performing: "${taskTitle}"` +
-      (taskDescription ? ` — ${taskDescription}.` : '.');
+    // What & Where & When
+    let taskLine = `Depict a single person actively performing: "${taskTitle}"`;
+    if (taskDescription) taskLine += ` — ${taskDescription}.`;
+
+    // Location context
+    if (options.location) {
+      taskLine += ` Location: ${options.location}.`;
+    }
+
+    // Time context (if provided in options, though currently passed via prompt text usually)
+    // We can infer lighting from the prompt if needed, or add explicit time context handling later.
+
     parts.push(taskLine);
 
     if (userDescription) {
@@ -734,7 +879,16 @@ export class AIImageGenerator {
       'Composition: centered subject, medium shot (waist-up), eye-level, clear silhouette, '
       + '10–15% margin around the subject, no cropping of head or hands.'
     );
-    parts.push('Environment: a few subtle props relevant to the task; minimal, slightly blurred background.');
+
+    // Environment refinement based on location
+    let envPrompt = 'Environment: ';
+    if (options.location) {
+      envPrompt += `clearly visible ${options.location} background, detailed but slightly blurred depth of field.`;
+    } else {
+      envPrompt += 'a few subtle props relevant to the task; minimal, slightly blurred background.';
+    }
+    parts.push(envPrompt);
+
     parts.push('No text, numbers, logos, or UI elements.');
     parts.push(
       `Style: ${styleExpanded}. Consistent color palette, vivid colors, soft lighting, ` +
@@ -759,14 +913,14 @@ export class AIImageGenerator {
         const q = normalize(rows[0].value);
         if (q) return q;
       }
-    } catch {}
+    } catch { }
     try {
       const rows2 = await this.database.query('SELECT value FROM settings WHERE key = ?', ['imageQuality']);
       if (rows2 && rows2.length > 0) {
         const q = normalize(rows2[0].value);
         if (q) return q;
       }
-    } catch {}
+    } catch { }
     return undefined;
   }
 
@@ -790,34 +944,34 @@ export class AIImageGenerator {
         .replace(/[^\w\s-]/g, '') // 特殊文字を除去
         .replace(/\s+/g, '_') // スペースをアンダースコアに
         .substring(0, 15); // 長さを制限
-      
+
       // キャッシュキーの一部をファイル名に含める（固有性を確保）
       const keyPrefix = cacheKey ? `_${cacheKey.substring(0, 8)}` : '';
       const fileName = `gemini_task_${Date.now()}${keyPrefix}_${safeTaskTitle || 'untitled'}.png`;
       const filePath = join(this.cacheDir, fileName);
-      
+
       writeFileSync(filePath, imageBuffer);
-      
+
       console.log('💾 Image saved to cache:', fileName);
       console.log('📁 File path:', filePath);
       console.log('📊 File size:', Math.round(imageBuffer.length / 1024), 'KB');
-      
+
       // マッピングを更新
       if (cacheKey) {
         this.taskImageMapping.set(cacheKey, fileName);
         console.log(`🔗 マッピング更新: ${cacheKey} -> ${fileName}`);
       }
-      
+
       if (taskId) {
         this.taskIdMapping.set(taskId, cacheKey || fileName);
         console.log(`🆔 TaskIDマッピング更新: ${taskId} -> ${cacheKey || fileName}`);
       }
-      
+
       // base64データURLを直接返す（file://URLではなく）
       const base64Data = imageBuffer.toString('base64');
       const base64DataUrl = `data:image/png;base64,${base64Data}`;
       console.log('🔗 Base64 Data URL生成完了（伏せ字）');
-      
+
       return base64DataUrl;
     } catch (error) {
       console.error('Failed to save image to cache:', error);
@@ -841,7 +995,7 @@ export class AIImageGenerator {
   private async getCachedImage(cacheKey: string): Promise<string | null> {
     // 1. メモリキャッシュをチェック
     const cached = this.memoryCache.get(cacheKey);
-    
+
     if (cached) {
       // TTLチェック
       if (Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -851,7 +1005,7 @@ export class AIImageGenerator {
         this.memoryCache.delete(cacheKey);
       }
     }
-    
+
     // 2. メモリキャッシュに見つからない場合、ファイルキャッシュをチェック
     try {
       const cachedFile = await this.loadFromFileCache(cacheKey);
@@ -864,7 +1018,7 @@ export class AIImageGenerator {
     } catch (error) {
       console.warn('⚠️ ファイルキャッシュの読み込みに失敗:', error);
     }
-    
+
     return null;
   }
 
@@ -876,7 +1030,7 @@ export class AIImageGenerator {
         this.memoryCache.delete(oldestKey);
       }
     }
-    
+
     this.memoryCache.set(cacheKey, {
       data: imageUrl,
       timestamp: Date.now()
@@ -897,7 +1051,7 @@ export class AIImageGenerator {
 
       // 1. まずマッピングから対応するファイル名を取得
       let targetFileName = this.taskImageMapping.get(cacheKey);
-      
+
       if (targetFileName) {
         const filePath = join(this.cacheDir, targetFileName);
         if (existsSync(filePath)) {
@@ -911,10 +1065,10 @@ export class AIImageGenerator {
 
       // 2. マッピングにない場合、キャッシュキーをファイル名に含むファイルを検索
       const files = readdirSync(this.cacheDir);
-      const cacheKeyFiles = files.filter(file => 
+      const cacheKeyFiles = files.filter(file =>
         file.includes(cacheKey.substring(0, 8)) && file.endsWith('.png')
       );
-      
+
       if (cacheKeyFiles.length > 0) {
         // 最新のファイルを選択
         cacheKeyFiles.sort((a, b) => {
@@ -922,14 +1076,14 @@ export class AIImageGenerator {
           const timestampB = parseInt(b.match(/gemini_task_(\d+)/)?.[1] || '0');
           return timestampB - timestampA;
         });
-        
+
         targetFileName = cacheKeyFiles[0];
         const filePath = join(this.cacheDir, targetFileName);
-        
+
         // マッピングを更新
         this.taskImageMapping.set(cacheKey, targetFileName);
         console.log(`🔗 新しいマッピング作成: ${cacheKey} -> ${targetFileName}`);
-        
+
         return await this.readImageFileAsBase64(filePath);
       }
 
@@ -986,12 +1140,12 @@ export class AIImageGenerator {
   // 互換性のため残しておく（使用されていないが、preloadで参照される可能性）
   public async convertFileUrlToBase64(fileUrl: string): Promise<string | null> {
     console.log('⚠️ convertFileUrlToBase64は非推奨 - 新しいシステムではbase64データURLを直接使用');
-    
+
     // すでにbase64データURLの場合はそのまま返す
     if (fileUrl.startsWith('data:')) {
       return fileUrl;
     }
-    
+
     console.warn('file://URLは新しいシステムではサポートされていません');
     return null;
   }
@@ -1000,7 +1154,7 @@ export class AIImageGenerator {
   public async getImageUrlByTaskId(taskId: number): Promise<string | null> {
     try {
       console.log(`🔍 TaskID ${taskId} の画像URLを取得中...`);
-      
+
       // 1. まずメモリマッピングから確認
       const cacheKey = this.taskIdMapping.get(taskId);
       if (cacheKey) {
@@ -1010,21 +1164,21 @@ export class AIImageGenerator {
           return cachedImage;
         }
       }
-      
+
       // 2. データベースから直接取得
       const taskResult = await this.database.query('SELECT imageUrl FROM tasks WHERE id = ?', [taskId]);
       if (taskResult.length > 0 && taskResult[0].imageUrl) {
         console.log(`✅ TaskID ${taskId} - データベースから取得`);
         const imageUrl = taskResult[0].imageUrl;
-        
+
         // 取得した画像URLをメモリキャッシュにも保存（次回の高速化）
         if (cacheKey) {
           await this.setCachedImage(cacheKey, imageUrl);
         }
-        
+
         return imageUrl;
       }
-      
+
       console.log(`❌ TaskID ${taskId} - 画像URLが見つかりません`);
       return null;
     } catch (error) {
@@ -1049,9 +1203,9 @@ export class AIImageGenerator {
   }
 
   // 画像生成キューの実装
-  private generateQueue = new Map<number, { 
-    promise: Promise<{ success: true; imageUrl: string } | { success: false; error: AIImageError }>; 
-    timestamp: number 
+  private generateQueue = new Map<number, {
+    promise: Promise<{ success: true; imageUrl: string } | { success: false; error: AIImageError }>;
+    timestamp: number
   }>();
 
   async generateTaskImageQueued(
@@ -1075,10 +1229,10 @@ export class AIImageGenerator {
     }
 
     const promise = this.executeImageGeneration(taskTitle, taskDescription, userDescription, options, taskId);
-    
+
     if (taskId) {
       this.generateQueue.set(taskId, { promise, timestamp: Date.now() });
-      
+
       // 完了後にキューから削除
       promise.finally(() => {
         this.generateQueue.delete(taskId);
@@ -1097,28 +1251,28 @@ export class AIImageGenerator {
   ): Promise<{ success: true; imageUrl: string } | { success: false; error: AIImageError }> {
     // リトライ機能付きで画像生成を実行
     const result = await this.generateWithRetry(taskTitle, taskDescription, userDescription, options, 3, taskId);
-    
+
     // 画像生成成功時、TaskIDがある場合はデータベースを更新
     if (result.success && taskId) {
       try {
         console.log('💾 データベースに画像URLを保存中 - タスクID:', taskId);
         console.log('🔗 保存する画像URL: [data:image/*;base64, ...redacted]');
         console.log('📊 画像URLサイズ:', result.imageUrl.length, 'characters');
-        
+
         const updateResult = await this.database.query(
           'UPDATE tasks SET imageUrl = ?, updatedAt = ? WHERE id = ?',
           [result.imageUrl, new Date().toISOString(), taskId]
         );
-        
+
         console.log('📋 データベースUPDATE結果:', updateResult);
         console.log('🔢 影響された行数:', updateResult.changes || 'unknown');
-        
+
         // 更新が正常に実行されたか確認
         const verifyResult = await this.database.query(
           'SELECT id, title, imageUrl FROM tasks WHERE id = ?',
           [taskId]
         );
-        
+
         console.log('🔍 更新後の確認クエリ結果:', {
           found: verifyResult.length > 0,
           taskId: verifyResult[0]?.id,
@@ -1127,7 +1281,7 @@ export class AIImageGenerator {
           imageUrlLength: verifyResult[0]?.imageUrl?.length,
           imageUrlPrefix: verifyResult[0]?.imageUrl ? '[data:image/*;base64, ...redacted]' : undefined
         });
-        
+
         if (verifyResult.length === 0) {
           console.error('❌ 更新確認: タスクが見つかりません - ID:', taskId);
           return {
@@ -1135,7 +1289,7 @@ export class AIImageGenerator {
             error: this.createError(AIImageErrorType.FILE_SAVE_ERROR, 'Task not found after update', { taskId })
           };
         }
-        
+
         if (!verifyResult[0].imageUrl) {
           console.error('❌ 更新確認: imageUrlが保存されていません');
           return {
@@ -1143,7 +1297,7 @@ export class AIImageGenerator {
             error: this.createError(AIImageErrorType.FILE_SAVE_ERROR, 'Image URL not saved to database', { taskId, updateResult })
           };
         }
-        
+
         console.log('✅ データベース更新完了 - タスクID:', taskId);
       } catch (dbError) {
         console.error('❌ データベース更新失敗:', dbError);
@@ -1154,7 +1308,7 @@ export class AIImageGenerator {
         };
       }
     }
-    
+
     return result;
   }
 
@@ -1279,27 +1433,27 @@ export class AIImageGenerator {
     if (errorMessage.includes('API key')) {
       return this.createError(AIImageErrorType.API_KEY_INVALID, errorMessage, { context, stack: errorStack });
     }
-    
+
     if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
       return this.createError(AIImageErrorType.QUOTA_EXCEEDED, errorMessage, { context, stack: errorStack });
     }
-    
+
     if (errorMessage.includes('rate') || errorMessage.includes('throttle')) {
       return this.createError(AIImageErrorType.RATE_LIMIT, errorMessage, { context, stack: errorStack });
     }
-    
+
     if (errorMessage.includes('content') || errorMessage.includes('policy') || errorMessage.includes('violation')) {
       return this.createError(AIImageErrorType.CONTENT_VIOLATION, errorMessage, { context, stack: errorStack });
     }
-    
+
     if (errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout')) {
       return this.createError(AIImageErrorType.NETWORK_ERROR, errorMessage, { context, stack: errorStack });
     }
-    
+
     if (errorMessage.includes('service') || errorMessage.includes('unavailable') || errorMessage.includes('503')) {
       return this.createError(AIImageErrorType.SERVICE_UNAVAILABLE, errorMessage, { context, stack: errorStack });
     }
-    
+
     // ファイル保存エラー
     if (errorMessage.includes('save') || errorMessage.includes('write') || errorMessage.includes('ENOSPC')) {
       return this.createError(AIImageErrorType.FILE_SAVE_ERROR, errorMessage, { context, stack: errorStack });

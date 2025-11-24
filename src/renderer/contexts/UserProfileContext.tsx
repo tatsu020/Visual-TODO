@@ -36,15 +36,15 @@ export const UserProfileProvider: React.FC<UserProfileProviderProps> = ({ childr
       setError(null);
       
       // Check if Electron API is available
-      if (!window.electronAPI?.database) {
+      if (!window.electronAPI.userProfile) {
         console.warn('Electron API not available, using fallback for user profile');
         setProfile(null);
         setLoading(false);
         return;
       }
       
-      const result = await window.electronAPI.database.query('SELECT * FROM user_profiles LIMIT 1');
-      setProfile(result.length > 0 ? result[0] : null);
+      const result = await window.electronAPI.userProfile.get();
+      setProfile(result?.success ? (result.profile || null) : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'プロファイルの取得に失敗しました');
       console.error('Failed to fetch user profile:', err);
@@ -60,43 +60,28 @@ export const UserProfileProvider: React.FC<UserProfileProviderProps> = ({ childr
       
       // 入力値検証とサニタイゼーション
       const validatedData = validateAndSanitize(UserProfileSchema, profileData);
-      
+      const normalizedQuality = validatedData.quality ?? undefined;
+
       const now = new Date().toISOString();
       
-      if (profile) {
-        // Update existing profile
-        await window.electronAPI.database.query(
-          'UPDATE user_profiles SET description = ?, referenceImagePath = ?, artStyle = ?, quality = ?, updatedAt = ? WHERE id = ?',
-          [validatedData.description, validatedData.referenceImagePath || null, validatedData.artStyle, validatedData.quality || null, now, profile.id]
-        );
-        
-        setProfile(prev => prev ? {
-          ...prev,
-          description: validatedData.description,
-          referenceImagePath: validatedData.referenceImagePath,
-          artStyle: validatedData.artStyle,
-          quality: validatedData.quality,
-          updatedAt: now
-        } : null);
-      } else {
-        // Create new profile
-        const result = await window.electronAPI.database.query(
-          'INSERT INTO user_profiles (description, referenceImagePath, artStyle, quality, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
-          [validatedData.description, validatedData.referenceImagePath || null, validatedData.artStyle, validatedData.quality || null, now, now]
-        );
-        
-        const newProfile: UserProfile = {
-          id: result.lastID,
-          description: validatedData.description,
-          referenceImagePath: validatedData.referenceImagePath,
-          artStyle: validatedData.artStyle,
-          quality: validatedData.quality,
-          createdAt: now,
-          updatedAt: now
-        };
-        
-        setProfile(newProfile);
-      }
+      await window.electronAPI.userProfile.save({
+        description: validatedData.description,
+        referenceImagePath: validatedData.referenceImagePath || null,
+        artStyle: validatedData.artStyle,
+        quality: normalizedQuality ?? null,
+        createdAt: profile?.createdAt || now,
+        updatedAt: now
+      });
+
+      setProfile(prev => ({
+        id: prev?.id,
+        description: validatedData.description,
+        referenceImagePath: validatedData.referenceImagePath,
+        artStyle: validatedData.artStyle,
+        quality: normalizedQuality,
+        createdAt: prev?.createdAt || now,
+        updatedAt: now
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'プロファイルの更新に失敗しました');
       console.error('Failed to update user profile:', err);
