@@ -649,17 +649,59 @@ export class AIImageGenerator {
       console.log('📋 APIレスポンス構造:', {
         candidates: result.candidates?.length || 0,
         modelVersion: result.modelVersion,
-        usageMetadata: result.usageMetadata
+        usageMetadata: result.usageMetadata,
+        hasPromptFeedback: !!result.promptFeedback
       });
 
+      // promptFeedbackをチェック（プロンプトが拒否された場合）
+      if (result.promptFeedback?.blockReason) {
+        const blockReason = result.promptFeedback.blockReason.toUpperCase();
+        console.warn(`⚠️ プロンプトが拒否されました (blockReason: ${result.promptFeedback.blockReason})`);
+        return {
+          success: false,
+          error: this.createError(
+            AIImageErrorType.CONTENT_VIOLATION,
+            'プロンプトがコンテンツポリシーに違反しているため、画像生成が拒否されました',
+            { blockReason: result.promptFeedback.blockReason, safetyRatings: result.promptFeedback.safetyRatings }
+          )
+        };
+      }
+
       // 画像データの抽出とキャッシュ保存
-      if (result.candidates) {
+      if (result.candidates && result.candidates.length > 0) {
         for (const candidate of result.candidates) {
           console.log('🔍 候補をチェック中:', {
             hasContent: !!candidate.content,
             hasParts: !!candidate.content?.parts,
-            partsCount: candidate.content?.parts?.length || 0
+            partsCount: candidate.content?.parts?.length || 0,
+            finishReason: candidate.finishReason
           });
+
+          // finishReasonをチェック（gemini-2.5-flash-imageモデルで使用される可能性がある）
+          if (candidate.finishReason) {
+            const finishReason = candidate.finishReason.toUpperCase();
+            if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
+              console.warn(`⚠️ 画像生成が拒否されました (finishReason: ${candidate.finishReason})`);
+              return {
+                success: false,
+                error: this.createError(
+                  AIImageErrorType.CONTENT_VIOLATION,
+                  'コンテンツポリシーにより画像生成が拒否されました',
+                  { finishReason: candidate.finishReason, safetyRatings: candidate.safetyRatings }
+                )
+              };
+            } else if (finishReason === 'MAX_TOKENS' || finishReason === 'OTHER') {
+              console.warn(`⚠️ 画像生成が完了しませんでした (finishReason: ${candidate.finishReason})`);
+              return {
+                success: false,
+                error: this.createError(
+                  AIImageErrorType.SERVICE_UNAVAILABLE,
+                  '画像生成が正常に完了しませんでした',
+                  { finishReason: candidate.finishReason }
+                )
+              };
+            }
+          }
 
           if (candidate.content && candidate.content.parts) {
             for (let i = 0; i < candidate.content.parts.length; i++) {
@@ -670,6 +712,32 @@ export class AIImageGenerator {
                 mimeType: part.inlineData?.mimeType,
                 dataLength: part.inlineData?.data?.length
               });
+
+              // テキストコンテンツが返された場合のエラーハンドリング
+              // responseModalities: ["IMAGE"]を指定していても、エラー時やフィルタリング時にテキストが返される可能性がある
+              if (part.text && !part.inlineData) {
+                console.warn('⚠️ APIがテキストレスポンスを返しました（画像生成が拒否された可能性）:', part.text);
+                // テキストメッセージからエラータイプを推測
+                const textLower = part.text.toLowerCase();
+                let errorType = AIImageErrorType.CONTENT_VIOLATION;
+                let errorMessage = part.text;
+                
+                if (textLower.includes('safety') || textLower.includes('policy') || textLower.includes('violation')) {
+                  errorType = AIImageErrorType.CONTENT_VIOLATION;
+                  errorMessage = 'コンテンツポリシーにより画像生成が拒否されました';
+                } else if (textLower.includes('quota') || textLower.includes('limit')) {
+                  errorType = AIImageErrorType.QUOTA_EXCEEDED;
+                  errorMessage = 'APIクォータを超過しました';
+                } else if (textLower.includes('invalid') || textLower.includes('error')) {
+                  errorType = AIImageErrorType.INVALID_PROMPT;
+                  errorMessage = '無効なプロンプトが検出されました';
+                }
+                
+                return {
+                  success: false,
+                  error: this.createError(errorType, errorMessage, { apiResponse: part.text })
+                };
+              }
 
               if (part.inlineData && part.inlineData.data) {
                 try {
@@ -701,16 +769,55 @@ export class AIImageGenerator {
         }
       }
 
+      // 画像データが見つからなかった場合のエラーハンドリング
       console.warn('❌ Gemini APIから画像データを受信できませんでした');
+      
+      // より詳細なエラー情報を収集
+      const errorDetails: any = {
+        candidatesCount: result.candidates?.length || 0,
+        modelVersion: result.modelVersion
+      };
+      
+      // 候補が存在するが画像データがない場合の詳細情報
+      if (result.candidates && result.candidates.length > 0) {
+        const firstCandidate = result.candidates[0];
+        errorDetails.finishReason = firstCandidate.finishReason;
+        errorDetails.hasContent = !!firstCandidate.content;
+        errorDetails.partsCount = firstCandidate.content?.parts?.length || 0;
+        
+        // テキストコンテンツが含まれているかチェック
+        const textParts = firstCandidate.content?.parts?.filter(p => p.text) || [];
+        if (textParts.length > 0) {
+          errorDetails.textContent = textParts.map(p => p.text).join(' ');
+        }
+      }
+      
       try {
         const redacted = this.redactBase64InObject(result);
         console.log('📝 レスポンス詳細(一部伏せ字):', JSON.stringify(redacted, null, 2));
       } catch {
         console.log('📝 レスポンス詳細(表示省略: サニタイズ失敗)');
       }
+      
+      // エラータイプを推測
+      let errorType = AIImageErrorType.SERVICE_UNAVAILABLE;
+      let errorMessage = '画像データを受信できませんでした';
+      
+      if (errorDetails.finishReason === 'SAFETY' || errorDetails.finishReason === 'RECITATION') {
+        errorType = AIImageErrorType.CONTENT_VIOLATION;
+        errorMessage = 'コンテンツポリシーにより画像生成が拒否されました';
+      } else if (errorDetails.textContent) {
+        // テキストコンテンツが含まれている場合、エラーメッセージとして使用
+        errorMessage = `APIエラー: ${errorDetails.textContent.substring(0, 200)}`;
+        if (errorDetails.textContent.toLowerCase().includes('safety') || 
+            errorDetails.textContent.toLowerCase().includes('policy')) {
+          errorType = AIImageErrorType.CONTENT_VIOLATION;
+        }
+      }
+      
       return {
         success: false,
-        error: this.createError(AIImageErrorType.SERVICE_UNAVAILABLE, 'No image data received from API')
+        error: this.createError(errorType, errorMessage, errorDetails)
       };
     } catch (error) {
       clearTimeout(timeoutId);
