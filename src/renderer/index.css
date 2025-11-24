@@ -8,11 +8,11 @@
     padding: 0;
     box-sizing: border-box;
   }
-  
+
   html {
     font-family: Inter, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif;
   }
-  
+
   body {
     background-color: #f8fafc;
     color: #1e293b;
@@ -21,52 +21,70 @@
 }
 
 /* Widget specific tweaks: tighten image and spacing */
-.widget-content .task-image { margin-bottom: 0; }
-.widget-content .task-image img { width: 100%; height: 100%; object-fit: cover; }
-.widget-content { gap: 0; }
+.widget-content .task-image {
+  margin-bottom: 0;
+}
 
-.widget-content .steps { margin-top: 2px; }
-.widget-content .steps .bar { margin-top: 2px; }
+.widget-content .task-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.widget-content {
+  gap: 0;
+}
+
+.widget-content .steps {
+  margin-top: 2px;
+}
+
+.widget-content .steps .bar {
+  margin-top: 2px;
+}
+
 /* ボタンと上段の間を詰める */
-.widget-content { row-gap: 2px; }
+.widget-content {
+  row-gap: 2px;
+}
 
 @layer components {
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
-  
+
   .btn-primary {
     @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
   }
-  
+
   .btn-secondary {
     @apply bg-secondary-200 text-secondary-800 hover:bg-secondary-300 focus:ring-secondary-500;
   }
-  
+
   .btn-danger {
     @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
   }
-  
+
   .input {
     @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
-  
+
   .textarea {
     @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none;
   }
-  
+
   .select {
     @apply w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white;
   }
-  
+
   .card {
     @apply bg-white rounded-xl shadow-sm border border-secondary-200 p-6;
   }
-  
+
   .task-card {
     @apply bg-white rounded-lg shadow-sm border border-secondary-200 p-4 hover:shadow-md transition-shadow duration-200;
   }
-  
+
   /* Simple Sticky Note Styles - Post-it focused */
   .sticky-note {
     @apply relative w-full max-w-sm;
@@ -74,7 +92,7 @@
     margin: 8px;
     border-radius: 3px;
     /* Simple shadow system for Post-it effect */
-    box-shadow: 
+    box-shadow:
       0 2px 4px rgba(0, 0, 0, 0.1),
       0 4px 8px rgba(0, 0, 0, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.3),
@@ -112,7 +130,7 @@
   /* Simple hover effect - reduced motion */
   .sticky-note:hover {
     transform: scale(1.01) rotate(var(--rotation, 0deg));
-    box-shadow: 
+    box-shadow:
       0 6px 12px rgba(0, 0, 0, 0.15),
       0 12px 24px rgba(0, 0, 0, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.4),
@@ -121,22 +139,22 @@
       inset 0 -1px 0 rgba(0, 0, 0, 0.05);
     transition: all 0.15s ease-out;
   }
-  
+
   .sticky-note-header {
     min-height: 60px;
   }
-  
+
   /* Default compact padding */
   .sticky-note {
     padding: 8px 12px;
   }
-  
+
   /* Increase padding for inProgress tasks or when hovered */
   .sticky-note.status-inProgress,
   .sticky-note.hovered-task {
     padding: 12px 16px;
   }
-  
+
   /* Add spacing and border only for inProgress tasks or when hovered */
   .sticky-note.status-inProgress .sticky-note-header,
   .sticky-note.hovered-task .sticky-note-header {
@@ -144,113 +162,26 @@
     padding-bottom: 4px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
-  
+
   .sticky-note-footer {
     flex: 1;
     display: flex;
     align-items: center;
   }
-  
+
   /* Add top margin only for inProgress tasks or when hovered */
   .sticky-note.status-inProgress .sticky-note-footer,
   .sticky-note.hovered-task .sticky-note-footer {
     @apply mt-1;
   }
-  
-  /* Category-based color palette - authentic Post-it colors */
-  .sticky-note.category-work {
-    /* Professional Blue */
-    background: linear-gradient(145deg, 
-      #64b5f6 0%, 
-      #42a5f5 50%, 
-      #2196f3 100%
-    );
-    border: 1px solid #1565c0;
-    color: #0d47a1;
-  }
-  
-  .sticky-note.category-health {
-    /* Healthy Green */
-    background: linear-gradient(145deg,
-      #81c784 0%,
-      #66bb6a 50%,
-      #4caf50 100%
-    );
-    border: 1px solid #2e7d32;
-    color: #1b5e20;
-  }
-  
-  .sticky-note.category-study {
-    /* Academic Purple */
-    background: linear-gradient(145deg,
-      #ba68c8 0%,
-      #ab47bc 50%,
-      #9c27b0 100%
-    );
-    border: 1px solid #6a1b9a;
-    color: #4a148c;
-  }
-  
-  .sticky-note.category-hobby {
-    /* Creative Pink */
-    background: linear-gradient(145deg,
-      #f06292 0%,
-      #ec407a 50%,
-      #e91e63 100%
-    );
-    border: 1px solid #ad1457;
-    color: #880e4f;
-  }
-  
-  .sticky-note.category-household {
-    /* Home Orange */
-    background: linear-gradient(145deg,
-      #ffb74d 0%,
-      #ffa726 50%,
-      #ff9800 100%
-    );
-    border: 1px solid #e65100;
-    color: #bf360c;
-  }
-  
-  .sticky-note.category-social {
-    /* Social Turquoise */
-    background: linear-gradient(145deg,
-      #4dd0e1 0%,
-      #26c6da 50%,
-      #00bcd4 100%
-    );
-    border: 1px solid #00838f;
-    color: #006064;
-  }
-  
-  .sticky-note.category-finance {
-    /* Money Gold */
-    background: linear-gradient(145deg,
-      #ffd54f 0%,
-      #ffca28 50%,
-      #ffc107 100%
-    );
-    border: 1px solid #ff8f00;
-    color: #e65100;
-  }
-  
-  .sticky-note.category-general {
+
+  /* Default Sticky Note Color */
+  .sticky-note {
     /* Classic Yellow - Default */
-    background: linear-gradient(145deg, 
-      #ffeb3b 0%, 
-      #fff176 50%, 
-      #fdd835 100%
-    );
-    border: 1px solid #f57f17;
-    color: #3e2723;
-  }
-  
-  /* Default for unknown categories */
-  .sticky-note:not(.category-work):not(.category-health):not(.category-study):not(.category-hobby):not(.category-household):not(.category-social):not(.category-finance):not(.category-general) {
-    background: linear-gradient(145deg, 
-      #ffeb3b 0%, #fff176 50%, #fdd835 100%
-    );
+    background: linear-gradient(145deg,
+        #ffeb3b 0%,
+        #fff176 50%,
+        #fdd835 100%);
     border: 1px solid #f57f17;
     color: #3e2723;
   }
@@ -263,25 +194,23 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: 
+    background-image:
       /* Basic horizontal fiber pattern */
-      linear-gradient(90deg, 
-        transparent 96%, 
-        rgba(0, 0, 0, 0.03) 97%, 
-        rgba(255, 255, 255, 0.15) 98%, 
-        transparent 100%
-      ),
+      linear-gradient(90deg,
+        transparent 96%,
+        rgba(0, 0, 0, 0.03) 97%,
+        rgba(255, 255, 255, 0.15) 98%,
+        transparent 100%),
       /* Basic vertical fiber pattern */
-      linear-gradient(0deg, 
-        transparent 97%, 
-        rgba(0, 0, 0, 0.02) 98%, 
-        rgba(255, 255, 255, 0.12) 99%, 
-        transparent 100%
-      ),
+      linear-gradient(0deg,
+        transparent 97%,
+        rgba(0, 0, 0, 0.02) 98%,
+        rgba(255, 255, 255, 0.12) 99%,
+        transparent 100%),
       /* Simple paper grain */
       radial-gradient(circle at 25% 35%, rgba(0, 0, 0, 0.04) 0.5px, transparent 1px),
       radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.08) 0.3px, transparent 0.8px);
-    background-size: 
+    background-size:
       3px 100%, 100% 3px, 8px 8px, 12px 12px;
     border-radius: inherit;
     pointer-events: none;
@@ -298,24 +227,23 @@
     width: 50px;
     height: 10px;
     background: linear-gradient(145deg,
-      rgba(255, 255, 255, 0.6) 0%,
-      rgba(230, 230, 230, 0.8) 100%
-    );
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(230, 230, 230, 0.8) 100%);
     border-radius: 2px;
-    box-shadow: 
+    box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.7),
       inset 0 -1px 0 rgba(0, 0, 0, 0.05);
     pointer-events: none;
     z-index: 3;
   }
-  
+
   /* Status effects */
   .sticky-note.status-completed {
     opacity: 0.7;
     filter: grayscale(0.2);
   }
-  
+
   .sticky-note.status-completed::after {
     content: '✓';
     position: absolute;
@@ -332,23 +260,23 @@
     font-size: 14px;
     font-weight: bold;
   }
-  
+
   /* SIMPLIFIED HOVER CONTROL - REACT STATE BASED */
-  
+
   /* Hide images for non-inProgress tasks by default */
   .sticky-note:not(.status-inProgress) .sticky-note-footer {
     display: none;
     height: 0;
     overflow: hidden;
   }
-  
+
   /* Show images for inProgress tasks */
   .sticky-note.status-inProgress .sticky-note-footer {
     opacity: 1;
     visibility: visible;
     transform: scaleY(1);
   }
-  
+
   /* Show images when hovered (React state controlled) */
   .sticky-note.hovered-task .sticky-note-footer {
     display: flex !important;
@@ -357,30 +285,30 @@
     visibility: visible;
     transition: all 0.2s ease-out;
   }
-  
+
   /* Prevent layout shifts */
   .sticky-note-footer {
     will-change: transform, opacity;
     backface-visibility: hidden;
   }
-  
+
   /* Adjust sticky note height with scaling */
   .sticky-note:not(.status-inProgress) {
     min-height: 90px;
   }
-  
+
   .sticky-note.hovered-task:not(.status-inProgress) {
     min-height: 280px;
     transition: min-height 0.2s ease-out;
   }
-  
+
   /* Simple drag state */
   .sticky-note.dragging {
     opacity: 0.8;
     transform: rotate(8deg) scale(1.05);
     z-index: 50;
     cursor: grabbing;
-    box-shadow: 
+    box-shadow:
       0 8px 16px rgba(0, 0, 0, 0.2),
       0 16px 32px rgba(0, 0, 0, 0.1);
   }
@@ -391,29 +319,33 @@
       transform: scale(1) rotate(0deg);
       opacity: 1;
     }
+
     25% {
       transform: scale(0.8) rotate(-5deg) skew(2deg, 1deg);
       opacity: 0.8;
     }
+
     50% {
       transform: scale(0.6) rotate(5deg) skew(-3deg, -2deg);
       opacity: 0.6;
     }
+
     75% {
       transform: scale(0.4) rotate(-10deg) skew(5deg, 3deg);
       opacity: 0.4;
     }
+
     100% {
       transform: scale(0.1) rotate(15deg) skew(-8deg, -5deg);
       opacity: 0;
     }
   }
-  
+
   .crumpling {
     animation: crumple 0.5s ease-in-out forwards;
     z-index: 100;
   }
-  
+
   /* Completion Box Styles */
   .trash-bin {
     position: relative;
@@ -426,30 +358,30 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 
+    box-shadow:
       0 4px 8px rgba(107, 114, 128, 0.2),
       0 8px 16px rgba(107, 114, 128, 0.1);
     will-change: transform;
   }
-  
+
   .trash-bin.drag-over {
     background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
     transform: scale(1.15) !important;
     animation: gentle-pulse 0.6s ease-in-out infinite;
   }
-  
+
   .trash-bin.animating {
     animation: completion-celebrate 1.2s ease-in-out;
   }
-  
+
   .trash-bin-inner {
     color: white;
     transition: color 0.3s ease;
     z-index: 2;
     position: relative;
   }
-  
-  
+
+
   /* Particle effects */
   .particle {
     position: absolute;
@@ -459,69 +391,77 @@
     border-radius: 50%;
     animation: particle-fly 1.2s ease-out forwards;
   }
-  
+
   .particle-1 {
     top: 20%;
     left: 20%;
     animation-delay: 0s;
   }
-  
+
   .particle-2 {
     top: 20%;
     right: 20%;
     animation-delay: 0.1s;
   }
-  
+
   .particle-3 {
     bottom: 20%;
     left: 20%;
     animation-delay: 0.2s;
   }
-  
+
   .particle-4 {
     bottom: 20%;
     right: 20%;
     animation-delay: 0.3s;
   }
-  
+
   @keyframes gentle-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: scale(1.15);
-      box-shadow: 
+      box-shadow:
         0 6px 12px rgba(34, 197, 94, 0.4),
         0 12px 24px rgba(34, 197, 94, 0.2);
     }
+
     50% {
       transform: scale(1.2);
-      box-shadow: 
+      box-shadow:
         0 8px 16px rgba(34, 197, 94, 0.5),
         0 16px 32px rgba(34, 197, 94, 0.3);
     }
   }
-  
+
   @keyframes completion-celebrate {
     0% {
       transform: scale(1.15);
     }
+
     25% {
       transform: scale(1.3) rotate(5deg);
     }
+
     50% {
       transform: scale(1.25) rotate(-3deg);
     }
+
     75% {
       transform: scale(1.2) rotate(2deg);
     }
+
     100% {
       transform: scale(1.05) rotate(0deg);
     }
   }
-  
+
   @keyframes particle-fly {
     0% {
       opacity: 1;
       transform: scale(1) translate(0, 0);
     }
+
     100% {
       opacity: 0;
       transform: scale(0) translate(var(--random-x, 30px), var(--random-y, -30px));
@@ -534,22 +474,27 @@
       transform: scale(1) rotate(0deg);
       opacity: 1;
     }
+
     20% {
       transform: scale(0.95) rotate(2deg);
       opacity: 0.9;
     }
+
     40% {
       transform: scale(0.85) rotate(-3deg) skew(1deg, 0.5deg);
       opacity: 0.8;
     }
+
     60% {
       transform: scale(0.7) rotate(5deg) skew(-2deg, -1deg);
       opacity: 0.6;
     }
+
     80% {
       transform: scale(0.4) rotate(-8deg) skew(3deg, 2deg);
       opacity: 0.3;
     }
+
     100% {
       transform: scale(0.1) rotate(15deg) skew(-5deg, -3deg);
       opacity: 0;
@@ -561,10 +506,12 @@
       transform: scale(0);
       opacity: 0;
     }
+
     50% {
       transform: scale(1.2);
       opacity: 1;
     }
+
     100% {
       transform: scale(1);
       opacity: 1;
@@ -590,24 +537,26 @@
   .animation-delay-600 {
     animation-delay: 0.6s;
   }
-  
+
   /* Hover Image Overlay Animations */
   @keyframes hoverImageAppear {
     0% {
       opacity: 0;
       transform: scale(0.8) translateY(-10px);
     }
+
     100% {
       opacity: 1;
       transform: scale(1) translateY(0);
     }
   }
-  
+
   @keyframes hoverImageDisappear {
     0% {
       opacity: 1;
       transform: scale(1) translateY(0);
     }
+
     100% {
       opacity: 0;
       transform: scale(0.8) translateY(-10px);
@@ -621,16 +570,19 @@
       transform: scale(0.25) translateZ(0);
       filter: blur(4px);
     }
+
     30% {
       opacity: 0.7;
       transform: scale(0.6) translateZ(0);
       filter: blur(2px);
     }
+
     70% {
       opacity: 0.95;
       transform: scale(1.05) translateZ(0);
       filter: blur(0px);
     }
+
     100% {
       opacity: 1;
       transform: scale(1) translateZ(0);
@@ -644,11 +596,13 @@
       transform: scale(1) translateZ(0);
       filter: blur(0px);
     }
+
     70% {
       opacity: 0.3;
       transform: scale(0.8) translateZ(0);
       filter: blur(1px);
     }
+
     100% {
       opacity: 0;
       transform: scale(0.4) translateZ(0);
@@ -660,23 +614,25 @@
   @keyframes simpleHoverImageAppear {
     0% {
       opacity: 0;
-      transform: scale(0.228571); /* 64px / 280px = 0.228571 */
+      transform: scale(0.228571);
+      /* 64px / 280px = 0.228571 */
     }
+
     100% {
       opacity: 1;
       transform: scale(1);
     }
   }
-  
+
   /* Global hover image overlay styles */
   .hover-image-global-overlay {
     transition: opacity 0.3s ease-out;
   }
-  
+
   .hover-image-global-overlay img {
     transition: transform 0.3s ease-out;
   }
-  
+
   .hover-image-global-overlay img:hover {
     transform: scale(1.05);
   }

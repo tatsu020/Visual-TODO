@@ -12,7 +12,7 @@ const UserProfileView: React.FC = () => {
     description: profile?.description || '',
     referenceImagePath: profile?.referenceImagePath || '',
     artStyle: profile?.artStyle || 'anime',
-    quality: profile?.quality
+    quality: profile?.quality || undefined // nullをundefinedに変換
   });
 
   const artStyles: { value: ArtStyle; label: string; description: string }[] = [
@@ -24,6 +24,18 @@ const UserProfileView: React.FC = () => {
     { value: 'cartoon', label: 'カートゥーン風', description: 'アメリカンコミック風' },
     { value: 'minimalist', label: 'ミニマル風', description: 'シンプルで洗練されたスタイル' }
   ];
+
+  // profileが変更されたときにformDataを更新
+  React.useEffect(() => {
+    if (profile) {
+      setFormData({
+        description: profile.description || '',
+        referenceImagePath: profile.referenceImagePath || '',
+        artStyle: profile.artStyle || 'anime',
+        quality: profile.quality || undefined // nullをundefinedに変換
+      });
+    }
+  }, [profile]);
 
   // 入力のたびに自動保存（500msデバウンス）
   React.useEffect(() => {
@@ -45,7 +57,7 @@ const UserProfileView: React.FC = () => {
       }
     }, 500);
     return () => clearTimeout(h);
-  }, [formData.description, formData.referenceImagePath, formData.artStyle]);
+  }, [formData.description, formData.referenceImagePath, formData.artStyle, formData.quality]);
 
   const handleImageUpload = async () => {
     const imagePath = await uploadReferenceImage();
@@ -60,7 +72,7 @@ const UserProfileView: React.FC = () => {
         description: profile.description,
         referenceImagePath: profile.referenceImagePath || '',
         artStyle: profile.artStyle,
-        quality: profile.quality
+        quality: profile.quality || undefined // nullをundefinedに変換
       });
       setIsEditing(false);
       setValidationError(null);

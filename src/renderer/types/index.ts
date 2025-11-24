@@ -2,7 +2,6 @@ export interface Task {
   id?: number;
   title: string;
   description?: string;
-  category: string;
   status: 'pending' | 'inProgress' | 'completed' | 'paused';
   type: 'immediate' | 'recurring' | 'scheduled';
   scheduledTime?: string;
@@ -13,6 +12,9 @@ export interface Task {
   imageUrl?: string;
   recurringPattern?: string;
   dueDate?: string;
+  location?: string;
+  priority?: TaskPriority;
+  scheduledTimeEnd?: string;
 }
 
 export interface TaskStep {
@@ -54,12 +56,14 @@ export interface Settings {
 export interface TaskFormData {
   title: string;
   description: string;
-  category: string;
-  type: 'immediate' | 'recurring' | 'scheduled';
+  type?: 'immediate' | 'recurring' | 'scheduled';
   scheduledTime?: string;
   estimatedDuration?: number;
   recurringPattern?: string;
   dueDate?: string;
+  location?: string;
+  priority?: TaskPriority;
+  scheduledTimeEnd?: string;
 }
 
 export interface UserProfileFormData {
@@ -76,17 +80,7 @@ export interface AIImageGenerationParams {
   size?: '256x256' | '384x256' | '512x512' | '1024x1024';
 }
 
-export type TaskCategory = 
-  | 'work'
-  | 'health'
-  | 'study'
-  | 'hobby'
-  | 'household'
-  | 'social'
-  | 'finance'
-  | 'general';
-
-export type ArtStyle = 
+export type ArtStyle =
   | 'anime'
   | 'realistic'
   | 'watercolor'
@@ -97,6 +91,7 @@ export type ArtStyle =
 
 export type TaskStatus = 'pending' | 'inProgress' | 'completed' | 'paused';
 export type TaskType = 'immediate' | 'recurring' | 'scheduled';
+export type TaskPriority = 'high' | 'medium' | 'low';
 
 export interface TaskStats {
   total: number;
@@ -105,14 +100,6 @@ export interface TaskStats {
   inProgress: number;
   paused: number;
   completionRate: number;
-}
-
-export interface CategoryStats {
-  [category: string]: {
-    total: number;
-    completed: number;
-    completionRate: number;
-  };
 }
 
 declare global {
@@ -150,6 +137,7 @@ declare global {
         getImageUrlByTaskId: (taskId: number) => Promise<{ success: boolean; imageUrl?: string; error?: string }>;
         setProvider: (provider: 'gemini' | 'openai') => Promise<{ success: boolean; error?: string }>;
         getProvider: () => Promise<'gemini' | 'openai'>;
+        getCacheDir: () => Promise<string>;
       };
       settings?: {
         setApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
@@ -161,6 +149,7 @@ declare global {
       };
       taskSteps?: {
         getByTaskId: (taskId: number) => Promise<{ success: boolean; steps: any[] }>;
+        create: (step: any) => Promise<{ success: boolean; error?: string }>;
       };
       on: (channel: string, callback: Function) => void;
       removeAllListeners: (channel: string) => void;

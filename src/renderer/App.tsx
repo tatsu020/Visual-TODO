@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { TaskProvider } from './contexts/TaskContext';
 import { UserProfileProvider } from './contexts/UserProfileContext';
-import { CategoryProvider } from './contexts/CategoryContext';
+
 import { HoverImageProvider } from './contexts/HoverImageContext';
 import './utils/browserMock'; // Initialize browser mock for testing
 import Sidebar from './components/Sidebar';
@@ -17,7 +17,7 @@ type View = 'tasks' | 'profile' | 'settings';
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // URL から現在ビューを導出（初期は tasks）
   const currentPath = location.pathname || '/tasks';
   const currentView: View = currentPath.startsWith('/profile')
@@ -51,7 +51,7 @@ function App() {
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
-  
+
   const handleViewChange = (view: View) => {
     const path = view === 'tasks' ? '/tasks' : view === 'profile' ? '/profile' : '/settings';
     if (location.pathname !== path) {
@@ -73,33 +73,33 @@ function App() {
   return (
     <ErrorBoundary level="page">
       <UserProfileProvider>
-        <CategoryProvider>
-          <TaskProvider>
-            <HoverImageProvider>
-              <div className="h-full flex" style={{ height: 'calc(100vh - 32px)' }}>
+
+        <TaskProvider>
+          <HoverImageProvider>
+            <div className="h-full flex" style={{ height: 'calc(100vh - 32px)' }}>
+              <ErrorBoundary level="component">
+                <Sidebar
+                  currentView={currentView}
+                  onViewChange={handleViewChange}
+                  isCollapsed={isSidebarCollapsed}
+                  onToggleCollapse={toggleSidebar}
+                />
+              </ErrorBoundary>
+              <main className="flex-1 flex flex-col min-h-0">
                 <ErrorBoundary level="component">
-                  <Sidebar 
-                    currentView={currentView} 
-                    onViewChange={handleViewChange}
-                    isCollapsed={isSidebarCollapsed}
-                    onToggleCollapse={toggleSidebar}
-                  />
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/tasks" replace />} />
+                    <Route path="/tasks" element={<TaskView />} />
+                    <Route path="/profile" element={<UserProfileView />} />
+                    <Route path="/settings" element={<SettingsView />} />
+                  </Routes>
                 </ErrorBoundary>
-                <main className="flex-1 flex flex-col min-h-0">
-                  <ErrorBoundary level="component">
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/tasks" replace />} />
-                      <Route path="/tasks" element={<TaskView />} />
-                      <Route path="/profile" element={<UserProfileView />} />
-                      <Route path="/settings" element={<SettingsView />} />
-                    </Routes>
-                  </ErrorBoundary>
-                </main>
-              </div>
-              <HoverImageOverlay />
-            </HoverImageProvider>
-          </TaskProvider>
-        </CategoryProvider>
+              </main>
+            </div>
+            <HoverImageOverlay />
+          </HoverImageProvider>
+        </TaskProvider>
+
       </UserProfileProvider>
     </ErrorBoundary>
   );

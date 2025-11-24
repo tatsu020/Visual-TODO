@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
-import { 
+import {
   Image as ImageIcon,
   RefreshCw,
   AlertCircle,
@@ -32,7 +32,7 @@ interface TaskCardState {
   };
 }
 
-type TaskCardAction = 
+type TaskCardAction =
   | { type: 'SET_UPDATING'; payload: boolean }
   | { type: 'START_DRAG' }
   | { type: 'END_DRAG' }
@@ -73,19 +73,19 @@ const TaskImage = React.memo<{
 }>(({ task, imageState }) => (
   <div className="flex-shrink-0 relative">
     {task.imageUrl ? (
-      <img 
-        src={task.imageUrl} 
+      <img
+        src={task.imageUrl}
         alt={`${task.title}のイラスト`}
         className="w-16 h-16 rounded-lg object-cover"
         loading="lazy"
         onError={(e) => {
           console.error('Image load error for task:', task.title, {
             imageUrlLength: task.imageUrl?.length,
-  imageUrlPrefix: task.imageUrl ? '[data:image/*;base64, ...redacted]' : undefined
+            imageUrlPrefix: task.imageUrl ? '[data:image/*;base64, ...redacted]' : undefined
           });
           const imgElement = e.target as HTMLImageElement;
           imgElement.style.display = 'none';
-          
+
           // 親要素にエラー状態を表示
           const parent = imgElement.parentElement;
           if (parent) {
@@ -129,14 +129,10 @@ const TaskMetadata = React.memo<{
       <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)}`}>
         {getStatusLabel(task.status)}
       </span>
-      {task.category && (
-        <span className="text-xs text-secondary-500 bg-secondary-100 px-2 py-1 rounded">
-          {task.category}
-        </span>
-      )}
+
       {inlineActions}
     </div>
-    
+
     {task.createdAt && (
       <span className="text-xs text-secondary-500">
         {formatDate(task.createdAt)}
@@ -176,7 +172,7 @@ const TaskImageError = React.memo<{
 const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = true, onDetailClick }) => {
   const { updateTask, regenerateTaskImage } = useTask();
   const { showHoverImage, hideHoverImage } = useHoverImage();
-  
+
   // useReducerで状態を統合して再レンダリングを最適化
   const [state, dispatch] = useReducer(taskCardReducer, {
     isUpdating: false,
@@ -189,10 +185,10 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
       canRetry: false
     }
   });
-  
+
   // 一覧用: 先頭（次）ステップ表示
   const [firstStep, setFirstStep] = useState<TaskStep | null>(null);
-  
+
   // 画像生成状態の初期化を一度だけ実行するためのref
   const isInitializedRef = useRef(false);
 
@@ -200,7 +196,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
 
   const handleStatusChange = useCallback(async (newStatus: TaskStatus) => {
     if (state.isUpdating) return;
-    
+
     try {
       dispatch({ type: 'SET_UPDATING', payload: true });
       await updateTask(task.id!, { status: newStatus });
@@ -229,7 +225,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
 
   // 旧：各カードでの遅延hide。新：コンテキスト側で一元管理するためタイマーは不要。
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const handleMouseEnter = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
@@ -264,20 +260,20 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
 
   const handleRegenerateImage = useCallback(async () => {
     if (!task.id || state.imageState.isGenerating) return;
-    dispatch({ 
-      type: 'SET_IMAGE_STATE', 
+    dispatch({
+      type: 'SET_IMAGE_STATE',
       payload: {
         isGenerating: true,
         error: null,
         canRetry: false
       }
     });
-    
+
     try {
       const result = await regenerateTaskImage(task.id);
       if (result.success) {
-        dispatch({ 
-          type: 'SET_IMAGE_STATE', 
+        dispatch({
+          type: 'SET_IMAGE_STATE',
           payload: {
             isGenerating: false,
             error: null,
@@ -285,8 +281,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
           }
         });
       } else {
-        dispatch({ 
-          type: 'SET_IMAGE_STATE', 
+        dispatch({
+          type: 'SET_IMAGE_STATE',
           payload: {
             isGenerating: false,
             error: result.error?.userMessage || '画像生成に失敗しました',
@@ -295,8 +291,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
         });
       }
     } catch (error) {
-      dispatch({ 
-        type: 'SET_IMAGE_STATE', 
+      dispatch({
+        type: 'SET_IMAGE_STATE',
         payload: {
           isGenerating: false,
           error: '画像生成中に予期しないエラーが発生しました',
@@ -333,19 +329,19 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
   // フォールバック画像取得機能
   const handleFallbackImageRetrieval = useCallback(async () => {
     if (!task.id || state.imageState.isGenerating) return;
-    
+
     console.log(`🔄 フォールバック画像取得開始 - TaskID: ${task.id}`);
-    
+
     try {
       if (window.electronAPI?.ai?.getImageUrlByTaskId) {
         const result = await window.electronAPI.ai.getImageUrlByTaskId(task.id);
-        
+
         if (result.success && result.imageUrl) {
           console.log(`✅ フォールバック画像取得成功 - TaskID: ${task.id}`);
           // ローカル状態を直接更新（データベースは既に正しい）
           // TaskContextのsetTasksを直接使用する代わりに画像状態だけ更新
-          dispatch({ 
-            type: 'SET_IMAGE_STATE', 
+          dispatch({
+            type: 'SET_IMAGE_STATE',
             payload: {
               isGenerating: false,
               error: null,
@@ -360,7 +356,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
     } catch (error) {
       console.error(`❌ フォールバック画像取得エラー - TaskID: ${task.id}:`, error);
     }
-    
+
     return null;
   }, [task.id, state.imageState.isGenerating]);
 
@@ -369,7 +365,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
     // タスクが変わった場合は初期化フラグをリセット
     if (!isInitializedRef.current) {
       isInitializedRef.current = true;
-      
+
       console.log(`🖼️ TaskCard初期化 - タスク: ${task.title} (ID: ${task.id})`, {
         hasImageUrl: !!task.imageUrl,
         imageUrlLength: task.imageUrl?.length
@@ -377,8 +373,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
 
       // 画像URLがある場合は生成完了状態にする
       if (task.imageUrl) {
-        dispatch({ 
-          type: 'SET_IMAGE_STATE', 
+        dispatch({
+          type: 'SET_IMAGE_STATE',
           payload: {
             isGenerating: false,
             error: null,
@@ -392,8 +388,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
           if (!retrievedUrl) {
             // フォールバックでも取得できない場合は生成中状態にする（一度だけ）
             console.log(`🎨 画像生成開始 - タスク: ${task.title}`);
-            dispatch({ 
-              type: 'SET_IMAGE_STATE', 
+            dispatch({
+              type: 'SET_IMAGE_STATE',
               payload: {
                 isGenerating: true,
                 error: null,
@@ -408,8 +404,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
     } else if (task.imageUrl && state.imageState.isGenerating) {
       // 画像URLが後から設定された場合（AI生成完了時）
       console.log(`✅ 画像生成完了検出 - タスク: ${task.title}`);
-      dispatch({ 
-        type: 'SET_IMAGE_STATE', 
+      dispatch({
+        type: 'SET_IMAGE_STATE',
         payload: {
           isGenerating: false,
           error: null,
@@ -418,7 +414,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
       });
     }
   }, [task.imageUrl, task.id, handleFallbackImageRetrieval]);
-  
+
   // タスクが変わった時に初期化フラグをリセット
   useEffect(() => {
     isInitializedRef.current = false;
@@ -454,15 +450,14 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
 
   // メモ化されたCSSクラス
   const cardClasses = useMemo(() => {
-    return `group relative p-4 bg-white rounded-lg border transition-all duration-200 ${
-      state.isDragging 
-        ? 'opacity-50 scale-95 border-primary-400' 
+    return `group relative p-4 bg-white rounded-lg border transition-all duration-200 ${state.isDragging
+        ? 'opacity-50 scale-95 border-primary-400'
         : 'hover:shadow-md border-secondary-200'
-    } ${state.isCrumpling ? 'animate-crumple' : ''}`;
+      } ${state.isCrumpling ? 'animate-crumple' : ''}`;
   }, [state.isDragging, state.isCrumpling]);
 
   return (
-    <div 
+    <div
       id={`task-${task.id}`}
       className={cardClasses}
       draggable={isDragEnabled}
@@ -476,7 +471,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
     >
       {/* Crumple overlay */}
       {state.isCrumpling && (
-        <CrumpleOverlay 
+        <CrumpleOverlay
           task={task}
           isActive={state.isCrumpling}
           onComplete={() => {
@@ -487,7 +482,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
 
       <div className="flex items-start space-x-3">
         {/* Task Image - メモ化されたコンポーネント */}
-        <TaskImage 
+        <TaskImage
           task={task}
           imageState={state.imageState}
         />
@@ -505,10 +500,10 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
                 </p>
               )}
             </div>
-            
+
             {/* 三点メニュー削除 */}
           </div>
-          
+
           {/* Task Metadata + Inline status actions */}
           <TaskMetadata
             task={task}
@@ -569,9 +564,9 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, isDragEnabled = tr
               </div>
             </div>
           )}
-          
+
           {/* 既存のアクション行は削除（インラインに集約） */}
-          
+
           {/* Error Display */}
           {state.imageState.error && (
             <TaskImageError

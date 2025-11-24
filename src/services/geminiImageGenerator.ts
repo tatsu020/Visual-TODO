@@ -16,7 +16,7 @@ export interface UserProfile {
 export interface TaskImageRequest {
   taskTitle: string;
   taskDescription?: string;
-  taskCategory?: string;
+
   userProfile?: UserProfile;
 }
 
@@ -50,52 +50,19 @@ export class GeminiImageGenerator {
    * タスク内容とユーザープロファイルから画像生成プロンプトを作成
    */
   private generatePrompt(request: TaskImageRequest): string {
-    const { taskTitle, taskDescription, taskCategory, userProfile } = request;
-    
+    const { taskTitle, taskDescription, userProfile } = request;
+
     let prompt = '';
-    
+
     // ユーザー情報の追加
     if (userProfile?.selfIntroduction) {
       prompt += `Person description: ${userProfile.selfIntroduction}. `;
     }
-    
+
     // タスクの内容を画像化
-    prompt += `Create an illustration of this person doing the following task: "${taskTitle}"`;
-    
-    if (taskDescription) {
-      prompt += `. Task details: ${taskDescription}`;
-    }
-    
-    // カテゴリに応じた環境設定
-    if (taskCategory) {
-      switch (taskCategory.toLowerCase()) {
-        case '仕事':
-        case 'work':
-          prompt += '. Setting: office or workspace environment';
-          break;
-        case '健康':
-        case 'health':
-          prompt += '. Setting: gym, park, or healthy lifestyle environment';
-          break;
-        case '勉強':
-        case 'study':
-          prompt += '. Setting: library, desk, or learning environment';
-          break;
-        case '趣味':
-        case 'hobby':
-          prompt += '. Setting: creative or leisure activity space';
-          break;
-      }
-    }
-    
-    // スタイル指定
-    const style = userProfile?.characterStyle || 'friendly cartoon';
-    prompt += `. Style: ${style}, bright and cheerful colors, positive and productive atmosphere`;
-    
-    // 画像の詳細仕様
     prompt += '. Show the person actively engaged in the task, with a happy and motivated expression';
     prompt += '. The image should be inspiring and encourage task completion';
-    
+
     return prompt;
   }
 
@@ -105,15 +72,15 @@ export class GeminiImageGenerator {
   async generateTaskImage(request: TaskImageRequest): Promise<GeneratedImage> {
     try {
       const prompt = this.generatePrompt(request);
-      
+
       // キャッシュキーの生成（プロンプトのハッシュ化の代わりに簡単な方法を使用）
       const cacheKey = Buffer.from(prompt).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
       const filename = `task-${cacheKey}-${Date.now()}.png`;
       const filepath = path.join(this.cacheDir, filename);
-      
+
       console.log('🎨 Generating image for task:', request.taskTitle);
       console.log('🎯 Prompt:', prompt);
-      
+
       // Gemini API での画像生成
       const result = await this.genAI.models.generateContent({
         model: "gemini-2.5-flash-image",
@@ -122,11 +89,11 @@ export class GeminiImageGenerator {
           responseModalities: ["IMAGE"]
         }
       });
-      
+
       // 画像データの抽出と保存
       let imageData: Buffer | null = null;
       let mimeType = 'image/png';
-      
+
       if (result.candidates) {
         for (const candidate of result.candidates) {
           if (candidate.content && candidate.content.parts) {
@@ -141,14 +108,14 @@ export class GeminiImageGenerator {
           if (imageData) break;
         }
       }
-      
+
       if (!imageData) {
         throw new Error('No image data received from Gemini API');
       }
-      
+
       // 画像ファイルの保存
       fs.writeFileSync(filepath, imageData);
-      
+
       const generatedImage: GeneratedImage = {
         imagePath: filepath,
         mimeType: mimeType,
@@ -156,13 +123,13 @@ export class GeminiImageGenerator {
         prompt: prompt,
         generatedAt: new Date()
       };
-      
+
       console.log('✅ Image generated successfully:', filename);
       console.log('📁 File path:', filepath);
       console.log('📊 File size:', Math.round(imageData.length / 1024), 'KB');
-      
+
       return generatedImage;
-      
+
     } catch (error) {
       console.error('❌ Error generating image:', error);
       throw new Error(`Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -175,20 +142,20 @@ export class GeminiImageGenerator {
   async cleanupCache(olderThanDays: number = 7): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-    
+
     const files = fs.readdirSync(this.cacheDir);
     let deletedCount = 0;
-    
+
     for (const file of files) {
       const filepath = path.join(this.cacheDir, file);
       const stats = fs.statSync(filepath);
-      
+
       if (stats.mtime < cutoffDate) {
         fs.unlinkSync(filepath);
         deletedCount++;
       }
     }
-    
+
     console.log(`🗑️ Cleaned up ${deletedCount} old cached images`);
     return deletedCount;
   }

@@ -611,6 +611,10 @@ class VisualTodoApp {
       return this.aiImageGenerator.getProvider();
     });
 
+    ipcMain.handle('ai:getCacheDir', () => {
+      return this.aiImageGenerator.getCacheDir();
+    });
+
     ipcMain.handle('settings:hasApiKey', async () => {
       try {
         const result = await this.database.query('SELECT value FROM settings WHERE key = ?', ['geminiApiKey']);

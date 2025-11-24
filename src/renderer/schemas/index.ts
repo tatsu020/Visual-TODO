@@ -10,9 +10,6 @@ export const TaskCreateSchema = z.object({
     .max(1000, '説明は1000文字以内で入力してください')
     .optional()
     .transform(val => val?.trim() || ''),
-  category: z.enum(['work', 'health', 'study', 'hobby', 'household', 'social', 'finance', 'general'], {
-    errorMap: () => ({ message: '有効なカテゴリを選択してください' })
-  }),
   type: z.enum(['immediate', 'recurring', 'scheduled'], {
     errorMap: () => ({ message: '有効なタイプを選択してください' })
   }),
@@ -53,7 +50,7 @@ export const UserProfileSchema = z.object({
   artStyle: z.enum(['anime', 'realistic', 'watercolor', 'pixel', 'sketch', 'cartoon', 'minimalist'], {
     errorMap: () => ({ message: '有効なアートスタイルを選択してください' })
   }),
-  quality: z.enum(['low', 'medium', 'high']).optional()
+  quality: z.enum(['low', 'medium', 'high']).nullish().transform(val => val ?? undefined)
 });
 
 // APIキー関連のスキーマ
@@ -83,7 +80,7 @@ export const sanitizeString = (value: unknown): string => {
   if (typeof value !== 'string') {
     throw new Error('文字列である必要があります');
   }
-  
+
   // SQLインジェクション防止: 危険な文字列をエスケープ
   return value
     .replace(/'/g, "''")  // シングルクォートをエスケープ

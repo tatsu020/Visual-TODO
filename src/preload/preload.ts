@@ -69,7 +69,8 @@ const electronAPI = {
       ipcRenderer.invoke('ai:getImageUrlByTaskId', taskId),
     setProvider: (provider: 'gemini' | 'openai') =>
       ipcRenderer.invoke('ai:setProvider', provider),
-    getProvider: () => ipcRenderer.invoke('ai:getProvider')
+    getProvider: () => ipcRenderer.invoke('ai:getProvider'),
+    getCacheDir: () => ipcRenderer.invoke('ai:getCacheDir')
   },
   
   // TaskStep operations
