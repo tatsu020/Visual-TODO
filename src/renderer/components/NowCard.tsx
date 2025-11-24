@@ -1,6 +1,7 @@
 import React from 'react';
 import { Task } from '../types';
-import { Check, MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock } from 'lucide-react';
+import { useHoverImage } from '../contexts/HoverImageContext';
 
 interface NowCardProps {
     task: Task | null;
@@ -8,6 +9,8 @@ interface NowCardProps {
 }
 
 const NowCard: React.FC<NowCardProps> = ({ task, onComplete }) => {
+    const { showHoverImage, hideHoverImage } = useHoverImage();
+
     if (!task) {
         return (
             <div className="h-full flex flex-col items-center justify-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-gray-400">
@@ -18,65 +21,66 @@ const NowCard: React.FC<NowCardProps> = ({ task, onComplete }) => {
     }
 
     return (
-        <div className="relative h-full w-full bg-white rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row">
-            {/* Image Area (Large) */}
-            <div className="w-full md:w-1/2 h-64 md:h-full relative bg-gray-100">
+        <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-xl group bg-gray-900">
+            {/* Background Image */}
+            <div
+                className="absolute inset-0"
+                onMouseEnter={(e) => {
+                    if (task.imageUrl) {
+                        showHoverImage(task.imageUrl, task.title, e.currentTarget.getBoundingClientRect());
+                    }
+                }}
+                onMouseLeave={hideHoverImage}
+            >
                 {task.imageUrl ? (
                     <img
                         src={task.imageUrl}
                         alt={task.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <span className="text-4xl">🖼️</span>
+                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                        <span className="text-6xl opacity-50">🖼️</span>
                     </div>
                 )}
-                <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
-                    NOW
-                </div>
+                {/* Gradient Overlay (Scrim) - Darker at bottom for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
             </div>
 
-            {/* Info Area */}
-            <div className="flex-1 p-6 flex flex-col justify-between">
-                <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
-                        {task.title}
-                    </h2>
+            {/* Content Overlay */}
+            <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                <div className="flex items-end justify-between w-full">
+                    {/* Left Side: Task Info */}
+                    <div className="flex-1 min-w-0 mr-6 text-white">
+                        <h2 className="text-4xl font-bold mb-4 leading-tight text-shadow-sm tracking-tight">
+                            {task.title}
+                        </h2>
 
-                    <div className="space-y-3 text-gray-600">
-                        {task.location && (
-                            <div className="flex items-center text-lg">
-                                <MapPin className="w-5 h-5 mr-2 text-blue-500" />
-                                <span>{task.location}</span>
+                        <div className="flex flex-col space-y-2">
+                            {/* Location */}
+                            <div className="flex items-center text-lg text-gray-100 font-medium">
+                                <MapPin className="w-5 h-5 mr-2.5 opacity-90" />
+                                <span>{task.location || 'No Location'}</span>
                             </div>
-                        )}
 
-                        {(task.scheduledTime || task.scheduledTimeEnd) && (
-                            <div className="flex items-center text-lg">
-                                <Clock className="w-5 h-5 mr-2 text-green-500" />
+                            {/* Time */}
+                            <div className="flex items-center text-lg text-gray-100 font-medium">
+                                <Clock className="w-5 h-5 mr-2.5 opacity-90" />
                                 <span>
-                                    {task.scheduledTime ? new Date(task.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                    {task.scheduledTimeEnd ? ` - ${new Date(task.scheduledTimeEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                    {task.scheduledTime || ''}
+                                    {task.scheduledTime && task.scheduledTimeEnd ? ' - ' : ''}
+                                    {task.scheduledTimeEnd || ''}
                                 </span>
                             </div>
-                        )}
-
-                        {task.description && (
-                            <p className="mt-4 text-gray-500 text-base leading-relaxed">
-                                {task.description}
-                            </p>
-                        )}
+                        </div>
                     </div>
-                </div>
 
-                <div className="mt-8">
+                    {/* Right Side: Action Button */}
                     <button
                         onClick={() => task.id && onComplete(task.id)}
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+                        className="flex-shrink-0 px-10 py-3.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-medium text-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 active:translate-y-0 backdrop-blur-sm bg-opacity-90 border border-white/10"
                     >
-                        <Check className="w-6 h-6 mr-2" />
-                        Complete Task
+                        Complete
                     </button>
                 </div>
             </div>

@@ -150,16 +150,20 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
 
     setLoading(false);
   };
-
   const createTask = async (taskData: TaskFormData): Promise<Task> => {
     const result = await handleAsyncError<Task>(async () => {
       setLoading(true);
       setError(null);
 
+      console.log('🚀 createTask called with:', taskData);
+
       // 入力値検証とサニタイゼーション
+      let validatedData: any;
       try {
-        var validatedData = validateAndSanitize(TaskCreateSchema, taskData);
+        validatedData = validateAndSanitize(TaskCreateSchema, taskData);
+        console.log('✅ Validation successful:', validatedData);
       } catch (validationError) {
+        console.error('❌ Validation failed:', validationError);
         throw createError.validation(
           validationError instanceof Error ? validationError.message : 'Validation failed',
           '入力されたタスク情報に問題があります。確認して再度お試しください。'
@@ -183,8 +187,8 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
 
       const now = new Date().toISOString();
       const dbResult = await window.electronAPI.database.query(
-        `INSERT INTO tasks (title, description, status, type, scheduledTime, estimatedDuration, createdAt, updatedAt, recurringPattern, dueDate)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO tasks (title, description, status, type, scheduledTime, estimatedDuration, createdAt, updatedAt, recurringPattern, dueDate, location, priority, scheduledTimeEnd)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           validatedData.title,
           validatedData.description || null,
@@ -195,11 +199,14 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
           now,
           now,
           validatedData.recurringPattern || null,
-          validatedData.dueDate || null
+          validatedData.dueDate || null,
+          validatedData.location || null,
+          validatedData.priority || 'medium',
+          validatedData.scheduledTimeEnd || null
         ]
       );
 
-      console.log('📝 タスク作成完了 - ID:', dbResult.lastID, 'タイトル:', validatedData.title);
+      console.log('📝 タスク作成完了 - ID:', dbResult.lastID, 'タイトル:', validatedData.title, '場所:', validatedData.location);
 
       const newTask: Task = {
         id: dbResult.lastID,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, AlertCircle, AlignLeft } from 'lucide-react';
 import { useTask } from '../contexts/TaskContext';
 import { TaskFormData } from '../types';
@@ -7,11 +7,17 @@ interface TaskFormProps {
   onClose: () => void;
   onSuccess: () => void;
   initialData?: Partial<TaskFormData>;
+  taskId?: number;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData }) => {
-  const { createTask } = useTask();
+const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData, taskId }) => {
+  const { createTask, updateTask } = useTask();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageProgress, setImageProgress] = useState<{
+    stage: string;
+    percent: number;
+    message: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState<TaskFormData>({
     title: initialData?.title || '',
@@ -26,6 +32,23 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData }) 
     estimatedDuration: 30,
   });
 
+  // 画像生成の進行度をリッスン
+  useEffect(() => {
+    const handleProgress = (progress: { stage: string; percent: number; message: string }) => {
+      setImageProgress(progress);
+      // 完了したら少し待ってから進行度を非表示
+      if (progress.stage === 'complete') {
+        setTimeout(() => setImageProgress(null), 2000);
+      }
+    };
+
+    window.electronAPI.on('ai:image-progress', handleProgress);
+
+    return () => {
+      window.electronAPI.removeAllListeners('ai:image-progress');
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -36,11 +59,15 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData }) 
 
     try {
       setIsSubmitting(true);
-      await createTask(formData);
+      if (taskId) {
+        await updateTask(taskId, formData);
+      } else {
+        await createTask(formData);
+      }
       onSuccess();
     } catch (error) {
-      console.error('Failed to create task:', error);
-      alert('タスクの作成に失敗しました。');
+      console.error('Failed to save task:', error);
+      alert('タスクの保存に失敗しました。');
     } finally {
       setIsSubmitting(false);
     }
@@ -102,9 +129,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData }) 
               When (いつ)
             </label>
             <input
-              type="datetime-local"
+              type="text"
               value={formData.scheduledTime || ''}
               onChange={(e) => handleChange('scheduledTime', e.target.value)}
+              placeholder="例: 明日の朝、来週の月曜日、15:00"
               className="input"
             />
           </div>
@@ -166,6 +194,22 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData }) 
               className="textarea text-sm"
             />
           </div>
+
+          {/* 画像生成の進行度表示 */}
+          {imageProgress && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-900">{imageProgress.message}</span>
+                <span className="text-sm text-blue-700">{imageProgress.percent}%</span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-2 transition-all duration-300 ease-out"
+                  style={{ width: `${imageProgress.percent}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Submit Buttons */}
           <div className="flex space-x-3 pt-4 border-t border-secondary-100 mt-6">

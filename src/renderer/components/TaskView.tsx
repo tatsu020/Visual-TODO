@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, CheckSquare } from 'lucide-react';
 import { useTask } from '../contexts/TaskContext';
 import { Task } from '../types';
 import TaskList from './TaskList';
@@ -9,6 +9,7 @@ import NowCard from './NowCard';
 const TaskView: React.FC = () => {
   const { tasks, loading, error, updateTask } = useTask();
   const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   // "NOW" task state
   const [nowTaskId, setNowTaskId] = useState<number | null>(null);
@@ -34,6 +35,16 @@ const TaskView: React.FC = () => {
     }
   };
 
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setShowForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingTask(null);
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -51,14 +62,19 @@ const TaskView: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white overflow-hidden font-sans">
       {/* Header / Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0">
-        <h1 className="text-lg font-bold text-gray-800">Visual TODO</h1>
+      <div className="bg-white px-8 py-6 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="bg-blue-100 p-1.5 rounded text-blue-600">
+            <CheckSquare className="w-5 h-5" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Visual TODO</h1>
+        </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center space-x-2 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all shadow-sm hover:shadow-md font-medium text-sm"
           >
             <Plus className="w-4 h-4" />
             <span>New Task</span>
@@ -66,39 +82,45 @@ const TaskView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Area - Split View */}
-      <div className="flex-1 flex flex-col min-h-0">
+      {/* Main Content Area - Single Scrollable View */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-8 pb-12">
 
-        {/* Top Area: NOW Card (Fixed height or flexible?) 
-            Let's give it a substantial portion, e.g., 40-50% or fixed height.
-        */}
-        <div className="h-[45%] p-4 pb-2 min-h-[300px]">
-          <NowCard
-            task={nowTask}
-            onComplete={handleCompleteNowTask}
-          />
-        </div>
+          {/* NOW Card Section */}
+          <div className="mb-12">
+            <div className="text-sm font-medium text-gray-500 mb-4 pl-1">NOW Card</div>
+            <div className="h-[450px] w-full">
+              <NowCard
+                task={nowTask}
+                onComplete={handleCompleteNowTask}
+              />
+            </div>
+          </div>
 
-        {/* Bottom Area: Task List */}
-        <div className="flex-1 p-4 pt-2 min-h-0 flex flex-col">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Up Next</h3>
-            <span className="text-xs text-gray-400">{listTasks.length} tasks</span>
+          {/* NEXT TASKS Section */}
+          <div>
+            <div className="mb-6 border-b border-gray-100 pb-4">
+              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">NEXT TASKS</h3>
+            </div>
+            <div>
+              <TaskList
+                tasks={listTasks}
+                onTaskSelect={handleTaskSelect}
+                onTaskEdit={handleEditTask}
+              />
+            </div>
           </div>
-          <div className="flex-1 border border-gray-200 rounded-xl bg-gray-100/50 overflow-hidden">
-            <TaskList
-              tasks={listTasks}
-              onTaskSelect={handleTaskSelect}
-            />
-          </div>
+
         </div>
       </div>
 
       {/* Modals */}
       {showForm && (
         <TaskForm
-          onClose={() => setShowForm(false)}
-          onSuccess={() => setShowForm(false)}
+          onClose={handleCloseForm}
+          onSuccess={handleCloseForm}
+          initialData={editingTask || undefined}
+          taskId={editingTask?.id}
         />
       )}
     </div>

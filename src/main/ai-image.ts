@@ -40,10 +40,12 @@ export class AIImageGenerator {
   private provider: 'gemini' | 'openai' = 'gemini';
   private database: DatabaseManager;
   private cacheDir: string;
+  private onProgress?: (progress: { stage: string; percent: number; message: string }) => void;
 
-  constructor(database: DatabaseManager) {
+  constructor(database: DatabaseManager, onProgress?: (progress: { stage: string; percent: number; message: string }) => void) {
     this.database = database;
     this.cacheDir = join(app.getPath('userData'), 'images');
+    this.onProgress = onProgress;
 
     if (!existsSync(this.cacheDir)) {
       mkdirSync(this.cacheDir, { recursive: true });
@@ -397,6 +399,9 @@ export class AIImageGenerator {
     options: Partial<ImageGenerationOptions>,
     taskId?: number
   ): Promise<{ success: true; imageUrl: string } | { success: false; error: AIImageError }> {
+    // 進行度: プロンプト構築開始
+    this.onProgress?.({ stage: 'preparing', percent: 10, message: 'プロンプトを準備中...' });
+
     // 毎回新規生成に切り替え（キャッシュは参照しない）
     const cacheKey = this.generateCacheKey(
       taskTitle,
@@ -419,6 +424,9 @@ export class AIImageGenerator {
     try {
       // OpenAI(gpt-image-1)を利用する場合
       if (this.provider === 'openai') {
+        // 進行度: OpenAI API呼び出し開始
+        this.onProgress?.({ stage: 'generating', percent: 30, message: 'OpenAIで画像を生成中...' });
+
         if (!this.openai) {
           return {
             success: false,
@@ -542,6 +550,9 @@ export class AIImageGenerator {
 
           clearTimeout(timeoutId);
 
+          // 進行度: レスポンス受信完了
+          this.onProgress?.({ stage: 'processing', percent: 70, message: '画像を処理中...' });
+
           if (!b64 && !url) {
             return {
               success: false,
@@ -569,6 +580,8 @@ export class AIImageGenerator {
           const base64DataUrl = await this.saveImageToCache(imageBuffer, taskTitle, cacheKey, taskId);
           // 生のbase64はログに出さない
           console.log('💾 ファイル保存完了: [data:image/*;base64, ...redacted]');
+          // 進行度: 保存完了
+          this.onProgress?.({ stage: 'complete', percent: 100, message: '画像生成が完了しました' });
           return { success: true, imageUrl: base64DataUrl };
         } catch (openaiError) {
           clearTimeout(timeoutId);
@@ -616,6 +629,9 @@ export class AIImageGenerator {
         console.warn('参照画像の読み込みに失敗。テキストのみで続行します:', e);
       }
 
+      // 進行度: Gemini API呼び出し開始
+      this.onProgress?.({ stage: 'generating', percent: 30, message: 'Geminiで画像を生成中...' });
+
       const result = await this.genAI!.models.generateContent({
         model: "gemini-2.5-flash-image",
         contents,
@@ -625,6 +641,9 @@ export class AIImageGenerator {
       });
 
       clearTimeout(timeoutId);
+
+      // 進行度: レスポンス受信完了
+      this.onProgress?.({ stage: 'processing', percent: 70, message: '画像を処理中...' });
 
       // レスポンス構造をログに出力
       console.log('📋 APIレスポンス構造:', {
@@ -660,6 +679,9 @@ export class AIImageGenerator {
                   // 1. キャッシュキーを使ってファイル保存とマッピング更新
                   const base64DataUrl = await this.saveImageToCache(imageBuffer, taskTitle, cacheKey, taskId);
                   console.log('💾 ファイル保存完了: [data:image/*;base64, ...redacted]');
+
+                  // 進行度: 保存完了
+                  this.onProgress?.({ stage: 'complete', percent: 100, message: '画像生成が完了しました' });
 
                   console.log('🔗 画像URL生成完了');
                   console.log('📊 データサイズ:', Math.round(part.inlineData.data.length / 1024), 'KB (base64)');

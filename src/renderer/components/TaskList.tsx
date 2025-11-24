@@ -5,9 +5,10 @@ import SmallTaskCard from './SmallTaskCard';
 interface TaskListProps {
   tasks: Task[];
   onTaskSelect: (task: Task) => void;
+  onTaskEdit: (task: Task) => void;
 }
 
-const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskSelect }) => {
+const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskSelect, onTaskEdit }) => {
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
       // 1. Priority
@@ -17,11 +18,14 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskSelect }) => {
       if (pA !== pB) return pB - pA; // Higher priority first
 
       // 2. Scheduled Time (Earliest first)
-      if (a.scheduledTime && b.scheduledTime) {
-        return new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime();
+      const timeA = a.scheduledTime ? new Date(a.scheduledTime).getTime() : NaN;
+      const timeB = b.scheduledTime ? new Date(b.scheduledTime).getTime() : NaN;
+
+      if (!isNaN(timeA) && !isNaN(timeB)) {
+        return timeA - timeB;
       }
-      if (a.scheduledTime) return -1;
-      if (b.scheduledTime) return 1;
+      if (!isNaN(timeA)) return -1;
+      if (!isNaN(timeB)) return 1;
 
       // 3. Creation Date (Newest first)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -40,12 +44,13 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskSelect }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 overflow-y-auto h-full content-start">
+    <div className="flex flex-col w-full">
       {sortedTasks.map(task => (
         <SmallTaskCard
           key={task.id}
           task={task}
           onSelect={onTaskSelect}
+          onEdit={onTaskEdit}
         />
       ))}
     </div>
