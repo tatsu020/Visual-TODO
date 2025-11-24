@@ -76,13 +76,14 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       setError(null);
 
       // Check if Electron API is available
-      if (!window.electronAPI?.database) {
+      if (!window.electronAPI.tasks) {
         console.warn('Electron API not available, using fallback');
         setTasks([]);
         return;
       }
 
-      const result = await window.electronAPI.database.query('SELECT * FROM tasks ORDER BY createdAt DESC');
+      const response = await window.electronAPI.tasks.list();
+      const result = response?.success && Array.isArray(response.tasks) ? response.tasks as Task[] : [];
 
       console.log('📊 fetchTasks()完了 - タスク数:', result.length);
       console.log('🔍 画像URL保存状況の詳細分析:');
@@ -171,7 +172,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       }
 
       // Check if Electron API is available
-      if (!window.electronAPI?.database) {
+      if (!window.electronAPI.tasks) {
         console.warn('Electron API not available, using fallback');
         const now = new Date().toISOString();
         const newTask: Task = {
@@ -185,35 +186,17 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
         return newTask;
       }
 
-      const now = new Date().toISOString();
-      const dbResult = await window.electronAPI.database.query(
-        `INSERT INTO tasks (title, description, status, type, scheduledTime, estimatedDuration, createdAt, updatedAt, recurringPattern, dueDate, location, priority, scheduledTimeEnd)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          validatedData.title,
-          validatedData.description || null,
-          'pending',
-          validatedData.type,
-          validatedData.scheduledTime || null,
-          validatedData.estimatedDuration || null,
-          now,
-          now,
-          validatedData.recurringPattern || null,
-          validatedData.dueDate || null,
-          validatedData.location || null,
-          validatedData.priority || 'medium',
-          validatedData.scheduledTimeEnd || null
-        ]
-      );
+      const dbResult = await window.electronAPI.tasks.create(validatedData);
 
-      console.log('📝 タスク作成完了 - ID:', dbResult.lastID, 'タイトル:', validatedData.title, '場所:', validatedData.location);
+      if (!dbResult?.success || !dbResult.task) {
+        throw createError.database('Failed to create task in main process');
+      }
+
+      console.log('📝 タスク作成完了 - ID:', dbResult.task.id, 'タイトル:', validatedData.title, '場所:', validatedData.location);
 
       const newTask: Task = {
-        id: dbResult.lastID,
         ...validatedData,
-        status: 'pending',
-        createdAt: now,
-        updatedAt: now
+        ...dbResult.task
       };
 
       setTasks(prev => [newTask, ...prev]);
@@ -252,7 +235,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
         console.error('❌ TaskID無効 - AI画像生成をスキップ:', {
           taskId: newTask.id,
           type: typeof newTask.id,
-          dbResultLastID: dbResult.lastID
+          taskIdFromMain: dbResult.task?.id
         });
       }
       return newTask;
@@ -285,16 +268,9 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
         (updatedData as any).completedAt = now;
       }
 
-      const keys = Object.keys(updatedData).filter(key => key !== 'id');
-      const values = keys.map(key => (updatedData as any)[key]);
-      const setClause = keys.map(key => `${key} = ?`).join(', ');
-
       console.log('🔄 データベース更新実行中:', { id, updatedData });
 
-      await window.electronAPI.database.query(
-        `UPDATE tasks SET ${setClause} WHERE id = ?`,
-        [...values, id]
-      );
+      await window.electronAPI.tasks.update(id, updatedData);
 
       console.log('✅ データベース更新完了、React状態を更新中');
 
@@ -320,7 +296,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      await window.electronAPI.database.query('DELETE FROM tasks WHERE id = ?', [id]);
+      await window.electronAPI.tasks.delete(id);
       setTasks(prev => prev.filter(task => task.id !== id));
 
     } catch (err) {
@@ -359,14 +335,18 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       let userDescription = '';
       let artStyle = 'anime';
       let referenceImagePath: string | undefined = undefined;
+      let profileQuality: 'low' | 'medium' | 'high' | undefined = undefined;
 
       try {
-        const profileResults = await window.electronAPI.database.query('SELECT * FROM user_profiles LIMIT 1');
-        if (profileResults.length > 0) {
-          const profile = profileResults[0];
+        const profileResponse = await window.electronAPI.userProfile.get();
+        const profile = profileResponse?.success ? profileResponse.profile : null;
+        if (profile) {
           userDescription = profile.description || '';
           artStyle = profile.artStyle || 'anime';
           referenceImagePath = profile.referenceImagePath || undefined;
+          if (profile.quality === 'low' || profile.quality === 'medium' || profile.quality === 'high') {
+            profileQuality = profile.quality;
+          }
         }
       } catch (profileErr) {
         console.warn('Could not fetch user profile, using defaults:', profileErr);
@@ -374,15 +354,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
 
       console.log('User description:', userDescription);
       console.log('Art style:', artStyle);
-
-      // プロファイルqualityがあればOpenAIに渡す
-      let profileQuality: 'low' | 'medium' | 'high' | undefined = undefined;
-      try {
-        const pr = await window.electronAPI.database.query('SELECT quality FROM user_profiles LIMIT 1');
-        if (pr.length > 0 && (pr[0].quality === 'low' || pr[0].quality === 'medium' || pr[0].quality === 'high')) {
-          profileQuality = pr[0].quality;
-        }
-      } catch { }
 
       const response = await window.electronAPI.ai.generateTaskImage(
         task.title,

@@ -1,5 +1,8 @@
-const notifier = require('node-notifier');
 import { join } from 'path';
+
+// node-notifier ships without ESM types, so use require.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const notifier = require('node-notifier');
 
 export interface NotificationOptions {
   title: string;
@@ -11,7 +14,7 @@ export interface NotificationOptions {
 }
 
 export class NotificationManager {
-  private iconPath: string;
+  private readonly iconPath: string;
 
   constructor() {
     this.iconPath = join(__dirname, '../../assets/notification-icon.png');
@@ -19,49 +22,52 @@ export class NotificationManager {
 
   show(options: NotificationOptions): Promise<string | null> {
     return new Promise((resolve) => {
-      notifier.notify({
-        title: options.title,
-        message: options.message,
-        icon: options.icon || this.iconPath,
-        sound: options.sound !== false,
-        wait: options.wait || false,
-        actions: options.actions || [],
-        dropdownLabel: 'アクション',
-        closeLabel: '閉じる'
-      }, (err: any, response: any, metadata: any) => {
-        if (err) {
-          console.error('Notification error:', err);
-          resolve(null);
-        } else {
-          resolve(response);
+      notifier.notify(
+        {
+          title: options.title,
+          message: options.message,
+          icon: options.icon || this.iconPath,
+          sound: options.sound !== false,
+          wait: options.wait || false,
+          actions: options.actions || [],
+          dropdownLabel: 'Actions',
+          closeLabel: 'Dismiss'
+        },
+        (err: any, response: any) => {
+          if (err) {
+            console.error('Notification error:', err);
+            resolve(null);
+          } else {
+            resolve(response);
+          }
         }
-      });
+      );
     });
   }
 
   showTaskReminder(taskTitle: string, imageUrl?: string): Promise<string | null> {
     return this.show({
-      title: 'タスクの時間です',
+      title: 'Upcoming task',
       message: taskTitle,
       icon: imageUrl || this.iconPath,
-      actions: ['開始', '5分後に再通知', 'スキップ'],
+      actions: ['Start now', 'Remind me in 5 min', 'Mark as done'],
       wait: true
     });
   }
 
   showTaskCompleted(taskTitle: string): Promise<string | null> {
     return this.show({
-      title: 'タスク完了！',
-      message: `「${taskTitle}」を完了しました`,
+      title: 'Task completed',
+      message: `${taskTitle} has been marked as done`,
       sound: true
     });
   }
 
   showUpcomingTask(taskTitle: string, minutesUntil: number): Promise<string | null> {
     return this.show({
-      title: `${minutesUntil}分後にタスクがあります`,
+      title: `${minutesUntil} min until task`,
       message: taskTitle,
-      actions: ['今すぐ開始', 'OK']
+      actions: ['Snooze', 'OK']
     });
   }
 }

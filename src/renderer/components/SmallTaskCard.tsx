@@ -82,10 +82,7 @@ const SmallTaskCard: React.FC<SmallTaskCardProps> = ({ task, onSelect, onEdit })
             {/* 5. Priority */}
             <div className="w-32 flex justify-center">
                 {task.priority && (
-                    <div className={`flex items-center text-base font-medium ${task.priority === 'high' ? 'text-red-600' :
-                        task.priority === 'medium' ? 'text-yellow-500' :
-                            'text-gray-500'
-                        }`}>
+                    <div className={`flex items-center text-base font-medium ${getPriorityColor(task.priority)}`}>
                         <AlertCircle className="w-5 h-5 mr-2 fill-current" />
                         {getPriorityLabel(task.priority)}
                     </div>

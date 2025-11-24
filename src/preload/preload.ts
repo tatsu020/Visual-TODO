@@ -25,11 +25,6 @@ const electronAPI = {
     set: (key: string, value: any) => ipcRenderer.invoke('store:set', key, value)
   },
 
-  // Database operations
-  database: {
-    query: (query: string, params?: any[]) => ipcRenderer.invoke('database:query', query, params)
-  },
-
   // Dialog operations
   dialog: {
     openFile: (filters?: Electron.FileFilter[]) => ipcRenderer.invoke('dialog:openFile', filters)
@@ -87,10 +82,26 @@ const electronAPI = {
       ipcRenderer.invoke('taskSteps:reorder', stepIds)
   },
 
-  // Tasks with steps
+  // Task operations
   tasks: {
+    list: (filter?: { status?: string; orderByPriority?: boolean }) =>
+      ipcRenderer.invoke('tasks:list', filter),
+    listForWidget: () =>
+      ipcRenderer.invoke('tasks:listForWidget'),
+    create: (task: any) =>
+      ipcRenderer.invoke('tasks:create', task),
+    update: (id: number, updates: any) =>
+      ipcRenderer.invoke('tasks:update', id, updates),
+    delete: (id: number) =>
+      ipcRenderer.invoke('tasks:delete', id),
     getWithSteps: (taskId: number) =>
       ipcRenderer.invoke('tasks:getWithSteps', taskId)
+  },
+
+  // User profile operations
+  userProfile: {
+    get: () => ipcRenderer.invoke('userProfile:get'),
+    save: (profile: any) => ipcRenderer.invoke('userProfile:save', profile)
   },
 
   // Secure Settings Management
@@ -100,7 +111,9 @@ const electronAPI = {
     clearApiKey: () => ipcRenderer.invoke('settings:clearApiKey'),
     setOpenAIApiKey: (apiKey: string) => ipcRenderer.invoke('settings:setOpenAIApiKey', apiKey),
     hasOpenAIApiKey: () => ipcRenderer.invoke('settings:hasOpenAIApiKey'),
-    clearOpenAIApiKey: () => ipcRenderer.invoke('settings:clearOpenAIApiKey')
+    clearOpenAIApiKey: () => ipcRenderer.invoke('settings:clearOpenAIApiKey'),
+    getMany: (keys: string[]) => ipcRenderer.invoke('settings:getMany', keys),
+    setMany: (entries: Record<string, string>) => ipcRenderer.invoke('settings:setMany', entries)
   },
 
   // Event listeners

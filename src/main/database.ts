@@ -179,6 +179,36 @@ export class DatabaseManager {
 
   // --- Task Methods ---
 
+  async createTaskFromInput(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'imageUrl'> & Partial<Pick<Task, 'status' | 'imageUrl'>>): Promise<Task> {
+    const now = new Date().toISOString();
+    const status = task.status || 'pending';
+    const result = await this.query(
+      `INSERT INTO tasks (
+        title, description, status, type, scheduledTime, 
+        estimatedDuration, createdAt, updatedAt, imageUrl, recurringPattern, dueDate,
+        location, priority, scheduledTimeEnd
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        task.title,
+        task.description || null,
+        status,
+        task.type,
+        task.scheduledTime || null,
+        task.estimatedDuration || null,
+        now,
+        now,
+        task.imageUrl || null,
+        task.recurringPattern || null,
+        task.dueDate || null,
+        task.location || null,
+        task.priority || 'medium',
+        task.scheduledTimeEnd || null
+      ]
+    );
+
+    return { ...task, id: result.lastID, status, imageUrl: task.imageUrl, createdAt: now, updatedAt: now };
+  }
+
   async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> {
     const now = new Date().toISOString();
     const result = await this.query(
@@ -209,6 +239,19 @@ export class DatabaseManager {
     query += ' ORDER BY createdAt DESC';
 
     return await this.query(query, params);
+  }
+
+  async getTasksByStatus(status: string, orderByPriority = false): Promise<Task[]> {
+    const order = orderByPriority
+      ? " ORDER BY CASE priority WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC, createdAt ASC"
+      : ' ORDER BY createdAt DESC';
+    return await this.query(`SELECT * FROM tasks WHERE status = ?${order}`, [status]);
+  }
+
+  async getPreferredTasksForWidget(): Promise<Task[]> {
+    const active = await this.getTasksByStatus('inProgress', true);
+    if (active.length > 0) return active;
+    return this.getTasksByStatus('pending', true);
   }
 
   async updateTask(id: number, updates: Partial<Task>): Promise<void> {
@@ -341,6 +384,28 @@ export class DatabaseManager {
   async getSetting(key: string): Promise<string | null> {
     const results = await this.query('SELECT value FROM settings WHERE key = ?', [key]);
     return results.length > 0 ? results[0].value : null;
+  }
+
+  async getSettings(keys: string[]): Promise<Record<string, string | null>> {
+    if (keys.length === 0) return {};
+    const placeholders = keys.map(() => '?').join(', ');
+    const rows = await this.query(`SELECT key, value FROM settings WHERE key IN (${placeholders})`, keys);
+    const map: Record<string, string | null> = {};
+    for (const key of keys) {
+      const row = rows.find((r: any) => r.key === key);
+      map[key] = row ? row.value : null;
+    }
+    return map;
+  }
+
+  async setSettings(entries: Record<string, string>): Promise<void> {
+    const now = new Date().toISOString();
+    for (const [key, value] of Object.entries(entries)) {
+      await this.query(
+        'INSERT OR REPLACE INTO settings (key, value, updatedAt) VALUES (?, ?, ?)',
+        [key, value, now]
+      );
+    }
   }
 
   // --- Stats & Performance ---
