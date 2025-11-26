@@ -23,8 +23,19 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Setup Windows Build Tools
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Windows SDK
+        uses: fbactions/setup-winsdk@v2
+        with:
+          winsdk-build-version: 22621
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npx electron-rebuild -f -w sqlite3
 
       - name: Build application
         run: npm run build
