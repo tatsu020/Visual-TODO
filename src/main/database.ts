@@ -1,4 +1,4 @@
-import { Database } from 'sqlite3';
+import Database from 'better-sqlite3';
 import { join } from 'path';
 import { app } from 'electron';
 
@@ -58,7 +58,7 @@ export interface Settings {
 }
 
 export class DatabaseManager {
-  private db: Database | null = null;
+  private db: Database.Database | null = null;
   private dbPath: string;
 
   constructor() {
@@ -66,46 +66,34 @@ export class DatabaseManager {
   }
 
   async initialize(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db = new Database(this.dbPath, async (err) => {
-        if (err) {
-          console.error('Database initialization failed:', err);
-          reject(err);
-        } else {
-          console.log('Database initialized at:', this.dbPath);
-          try {
-            await this.createTables();
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        }
-      });
-    });
+    try {
+      this.db = new Database(this.dbPath);
+      console.log('Database initialized at:', this.dbPath);
+      this.createTables();
+    } catch (err) {
+      console.error('Database initialization failed:', err);
+      throw err;
+    }
   }
 
   public async query(sql: string, params: any[] = []): Promise<any> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
 
-      if (sql.trim().toUpperCase().startsWith('SELECT')) {
-        this.db.all(sql, params, (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows);
-        });
-      } else {
-        this.db.run(sql, params, function (err) {
-          if (err) reject(err);
-          else resolve({ lastID: this.lastID, changes: this.changes });
-        });
-      }
-    });
+    const trimmedSql = sql.trim().toUpperCase();
+    
+    if (trimmedSql.startsWith('SELECT')) {
+      const stmt = this.db.prepare(sql);
+      return stmt.all(...params);
+    } else {
+      const stmt = this.db.prepare(sql);
+      const result = stmt.run(...params);
+      return { lastID: result.lastInsertRowid, changes: result.changes };
+    }
   }
 
-  private async createTables(): Promise<void> {
+  private createTables(): void {
     if (!this.db) throw new Error('Database not initialized');
 
     const queries = [
@@ -157,24 +145,22 @@ export class DatabaseManager {
     ];
 
     for (const query of queries) {
-      await this.query(query);
+      this.db.exec(query);
     }
 
     // Migrations
-    try {
-      await this.query('ALTER TABLE tasks ADD COLUMN location TEXT');
-      console.log('✅ Migrated: added tasks.location column');
-    } catch (e) { /* Column likely exists */ }
+    this.runMigration('ALTER TABLE tasks ADD COLUMN location TEXT', 'added tasks.location column');
+    this.runMigration("ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'medium'", 'added tasks.priority column');
+    this.runMigration('ALTER TABLE tasks ADD COLUMN scheduledTimeEnd TEXT', 'added tasks.scheduledTimeEnd column');
+  }
 
+  private runMigration(sql: string, description: string): void {
     try {
-      await this.query("ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'medium'");
-      console.log('✅ Migrated: added tasks.priority column');
-    } catch (e) { /* Column likely exists */ }
-
-    try {
-      await this.query('ALTER TABLE tasks ADD COLUMN scheduledTimeEnd TEXT');
-      console.log('✅ Migrated: added tasks.scheduledTimeEnd column');
-    } catch (e) { /* Column likely exists */ }
+      this.db?.exec(sql);
+      console.log(`✅ Migrated: ${description}`);
+    } catch (e) {
+      // Column likely exists
+    }
   }
 
   // --- Task Methods ---
@@ -206,7 +192,7 @@ export class DatabaseManager {
       ]
     );
 
-    return { ...task, id: result.lastID, status, imageUrl: task.imageUrl, createdAt: now, updatedAt: now };
+    return { ...task, id: Number(result.lastID), status, imageUrl: task.imageUrl, createdAt: now, updatedAt: now };
   }
 
   async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> {
@@ -224,7 +210,7 @@ export class DatabaseManager {
       ]
     );
 
-    return { ...task, id: result.lastID, createdAt: now, updatedAt: now };
+    return { ...task, id: Number(result.lastID), createdAt: now, updatedAt: now };
   }
 
   async getTasks(status?: string): Promise<Task[]> {
@@ -287,7 +273,7 @@ export class DatabaseManager {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [step.task_id, step.title, step.description, step.order_index, step.status, now, now]
     );
-    return result.lastID;
+    return Number(result.lastID);
   }
 
   async getTaskSteps(taskId: number): Promise<TaskStep[]> {

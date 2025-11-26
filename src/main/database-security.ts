@@ -1,4 +1,4 @@
-import { Database } from 'sqlite3';
+import Database from 'better-sqlite3';
 
 // SQLクエリのサニタイゼーションと検証
 export class DatabaseSecurity {
@@ -112,11 +112,11 @@ export class DatabaseSecurity {
   /**
    * セキュアなクエリ実行ラッパー
    */
-  static async executeSecure(
-    db: Database, 
+  static executeSecure(
+    db: Database.Database, 
     query: string, 
     params?: any[]
-  ): Promise<any> {
+  ): any {
     // レート制限チェック
     this.checkRateLimit();
     
@@ -127,21 +127,17 @@ export class DatabaseSecurity {
     const sanitizedParams = this.sanitizeParams(params);
     
     // クエリ実行
-    return new Promise((resolve, reject) => {
-      if (query.trim().toLowerCase().startsWith('select')) {
-        db.all(query, sanitizedParams, (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows);
-        });
-      } else {
-        db.run(query, sanitizedParams, function(err) {
-          if (err) reject(err);
-          else resolve({ 
-            lastID: this.lastID, 
-            changes: this.changes 
-          });
-        });
-      }
-    });
+    const trimmedQuery = query.trim().toLowerCase();
+    if (trimmedQuery.startsWith('select')) {
+      const stmt = db.prepare(query);
+      return stmt.all(...sanitizedParams);
+    } else {
+      const stmt = db.prepare(query);
+      const result = stmt.run(...sanitizedParams);
+      return { 
+        lastID: result.lastInsertRowid, 
+        changes: result.changes 
+      };
+    }
   }
 }

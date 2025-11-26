@@ -877,7 +877,7 @@ export class AIImageGenerator {
     if (options.scheduledTime) {
       parts.push(
         `Time: "${options.scheduledTime}". ` +
-        `Reflect appropriate lighting and atmosphere for this time context.`
+        `Subtly suggest the time of day through the overall atmosphere.`
       );
     }
 

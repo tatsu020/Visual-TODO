@@ -23,17 +23,8 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Windows Build Tools
-        run: |
-          choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --quiet --norestart"
-          choco install windows-sdk-10-version-2004-all
-        shell: powershell
-
       - name: Install dependencies
         run: npm ci
-
-      - name: Rebuild native modules for Electron
-        run: npx electron-rebuild -f -w sqlite3
 
       - name: Build application
         run: npm run build

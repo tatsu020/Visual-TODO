@@ -5,6 +5,7 @@
   "main": "dist/src/main/main.js",
   "homepage": "./",
   "scripts": {
+    "postinstall": "electron-builder install-app-deps",
     "dev": "concurrently \"npm run dev:renderer\" \"node scripts/wait-on-vite.js && npm run dev:main\"",
     "dev:worktree": "cross-env VITE_PORT=5174 concurrently \"npm run dev:renderer\" \"node scripts/wait-on-vite.js && npm run dev:main\"",
     "dev:renderer": "vite --mode development",
@@ -15,7 +16,8 @@
     "package": "npm run build && electron-builder",
     "release": "npm run build && electron-builder --publish always",
     "lint": "eslint src --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "rebuild": "electron-builder install-app-deps"
   },
   "keywords": [
     "todo",
@@ -29,7 +31,7 @@
   "author": "Visual TODO App",
   "license": "MIT",
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
@@ -39,7 +41,7 @@
     "autoprefixer": "^10.4.16",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "^28.0.0",
+    "electron": "^39.2.3",
     "electron-builder": "^24.9.1",
     "eslint": "^8.55.0",
     "eslint-plugin-react": "^7.33.2",
@@ -54,6 +56,7 @@
   "dependencies": {
     "@google/genai": "^1.7.0",
     "@types/uuid": "^9.0.7",
+    "better-sqlite3": "^12.4.6",
     "date-fns": "^2.30.0",
     "electron-store": "^8.1.0",
     "lucide-react": "^0.294.0",
@@ -62,7 +65,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.8.0",
-    "sqlite3": "^5.1.6",
     "uuid": "^9.0.1",
     "zod": "^3.25.67"
   },

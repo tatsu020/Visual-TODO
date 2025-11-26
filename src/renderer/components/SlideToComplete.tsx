@@ -158,10 +158,11 @@ const SlideToComplete: React.FC<SlideToCompleteProps> = ({
     >
       {/* Progress fill with gradient */}
       <div
-        className="absolute inset-y-0 left-0 rounded-full transition-all duration-100"
+        className="absolute inset-y-0 left-0 rounded-full"
         style={{ 
           width: `${position + THUMB_WIDTH}px`,
           background: `linear-gradient(90deg, ${progressColors.fill}, ${progressColors.bg})`,
+          transition: isDragging ? 'none' : 'width 0.3s ease-out',
         }}
       />
 
@@ -176,32 +177,21 @@ const SlideToComplete: React.FC<SlideToCompleteProps> = ({
         />
       )}
 
-      {/* Text or Progress percentage */}
+      {/* Text */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {isDragging && progress > 0.1 ? (
-          // パーセンテージ表示（ドラッグ中）
-          <span 
-            className="text-white font-bold text-2xl transition-all duration-150"
-            style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
-          >
-            {Math.round(progress * 100)}%
-          </span>
-        ) : (
-          // テキスト表示（通常時）
-          <span
-            className={`
-              font-semibold text-lg tracking-wide
-              transition-all duration-300
-              ${progress > 0.3 ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}
-            `}
-            style={{
-              color: progress > 0 ? 'white' : 'rgba(255,255,255,0.9)',
-              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-            }}
-          >
-            {isCompleted ? completedText : text}
-          </span>
-        )}
+        <span
+          className={`
+            font-semibold text-lg tracking-wide
+            transition-all duration-300
+            ${progress > 0.3 ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}
+          `}
+          style={{
+            color: progress > 0 ? 'white' : 'rgba(255,255,255,0.9)',
+            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+          }}
+        >
+          {isCompleted ? completedText : text}
+        </span>
       </div>
 
       {/* Animated arrow hints */}
