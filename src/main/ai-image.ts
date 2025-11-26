@@ -11,6 +11,8 @@ export interface ImageGenerationOptions {
   style: string;
   size?: '256x256' | '384x256' | '512x512' | '1024x1024';
   location?: string;
+  scheduledTime?: string;      // 開始時間 (HH:mm形式)
+  scheduledTimeEnd?: string;   // 終了時間 (HH:mm形式)
 }
 
 export enum AIImageErrorType {
@@ -855,48 +857,66 @@ export class AIImageGenerator {
     const styleExpanded = styleExpandedMap[style] || styleExpandedMap.anime;
 
     const parts: string[] = [];
-    parts.push('High-quality illustration for a visual to-do app.');
+    parts.push('High-quality illustration for a visual to-do app. Self-modeling visualization.');
 
-    // What & Where & When
-    let taskLine = `Depict a single person actively performing: "${taskTitle}"`;
-    if (taskDescription) taskLine += ` — ${taskDescription}.`;
-
-    // Location context
-    if (options.location) {
-      taskLine += ` Location: ${options.location}.`;
+    // What: タスク内容（具体的な行動）
+    let taskLine = `Scene: A single person actively performing the task: "${taskTitle}"`;
+    if (taskDescription) {
+      taskLine += ` — ${taskDescription}`;
     }
-
-    // Time context (if provided in options, though currently passed via prompt text usually)
-    // We can infer lighting from the prompt if needed, or add explicit time context handling later.
-
     parts.push(taskLine);
 
+    // Who: ユーザーの描写（Self-Modeling - 自分自身のイメージ）
     if (userDescription) {
-      parts.push(`The person is ${userDescription}; show them happy and focused.`);
-    }
-
-    parts.push(
-      'Composition: centered subject, medium shot (waist-up), eye-level, clear silhouette, '
-      + '10–15% margin around the subject, no cropping of head or hands.'
-    );
-
-    // Environment refinement based on location
-    let envPrompt = 'Environment: ';
-    if (options.location) {
-      envPrompt += `clearly visible ${options.location} background, detailed but slightly blurred depth of field.`;
+      parts.push(`The person is ${userDescription}. Show them happy, motivated, and fully engaged in the task.`);
     } else {
-      envPrompt += 'a few subtle props relevant to the task; minimal, slightly blurred background.';
+      parts.push('Show the person happy, motivated, and fully engaged in the task.');
     }
-    parts.push(envPrompt);
 
-    parts.push('No text, numbers, logos, or UI elements.');
+    // When: 時間（自然言語テキストをそのまま渡してAIに解釈させる）
+    if (options.scheduledTime) {
+      parts.push(
+        `Time: "${options.scheduledTime}". ` +
+        `Reflect appropriate lighting and atmosphere for this time context.`
+      );
+    }
+
+    // Where: 場所（具体的な環境）
+    if (options.location) {
+      parts.push(
+        `Location: "${options.location}". ` +
+        `Show the environment clearly with recognizable details of this location, ` +
+        `but keep the focus on the person performing the task.`
+      );
+    } else {
+      parts.push(
+        'Environment: A few subtle props relevant to the task; ' +
+        'minimal, slightly blurred background that suggests an appropriate setting.'
+      );
+    }
+
+    // 構図指示
     parts.push(
-      `Style: ${styleExpanded}. Consistent color palette, vivid colors, soft lighting, ` +
-      'clean edges, high contrast. Safe for work.'
+      'Composition: centered subject, medium shot (waist-up), eye-level, clear silhouette, ' +
+      '10–15% margin around the subject, no cropping of head or hands.'
     );
-    parts.push('Goal: readable as a 64×64 thumbnail; iconic, simple, motivational.');
 
-    // 参照画像のパスはここでは含めない（API側で画像を添付し、別途追記する）
+    // 禁止事項
+    parts.push('No text, numbers, logos, watermarks, or UI elements in the image.');
+
+    // スタイルと品質
+    parts.push(
+      `Style: ${styleExpanded}. ` +
+      'Consistent color palette matching the time and location context, ' +
+      'clean edges, high contrast for thumbnail visibility. Safe for work.'
+    );
+
+    // 目標
+    parts.push(
+      'Goal: Create an inspiring image that helps the user visualize themselves completing this task. ' +
+      'The image should work as a 64×64 thumbnail while being iconic, simple, and motivational.'
+    );
+
     return parts.join('\n\n');
   }
 

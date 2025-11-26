@@ -359,7 +359,14 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
         task.title,
         task.description || '',
         userDescription,
-        { style: artStyle, size: '256x256', referenceImagePath, quality: profileQuality },
+        {
+          style: artStyle,
+          size: '256x256',
+          referenceImagePath,
+          quality: profileQuality,
+          location: task.location,
+          scheduledTime: task.scheduledTime
+        },
         task.id
       );
 
