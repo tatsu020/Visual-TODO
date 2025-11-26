@@ -86,7 +86,9 @@
     "publish": [
       {
         "provider": "github",
-        "releaseType": "draft"
+        "owner": "tatsu020",
+        "repo": "Visual-TODO",
+        "releaseType": "release"
       }
     ]
   }

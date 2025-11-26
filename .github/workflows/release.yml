@@ -4,14 +4,14 @@ on:
   push:
     tags:
       - 'v*'  # v1.0.0 のようなタグがプッシュされたときに実行
+  workflow_dispatch:  # 手動実行も可能に
+
+permissions:
+  contents: write  # リリースへのアップロード権限
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [windows-latest]  # macOS や Linux を追加する場合: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
@@ -26,17 +26,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and Release
+      - name: Build application
+        run: npm run build
+
+      - name: Package and Release to GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run release
+        run: npx electron-builder --win --publish always
 
-      - name: Upload artifacts
+      - name: Upload artifacts (backup)
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: release-${{ matrix.os }}
+          name: release-windows
           path: |
             release/*.exe
             release/*.zip
-            release/*.yml
+            release/*.blockmap
+            release/latest.yml
           if-no-files-found: warn
