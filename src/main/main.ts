@@ -199,9 +199,10 @@ class VisualTodoApp {
       console.log('[Main] Page finished loading');
     });
 
-    this.mainWindow.on('close', (event) => {
-      event.preventDefault();
-      this.mainWindow?.hide();
+    this.mainWindow.on('close', () => {
+      // アプリを終了する（トレイに隠さない）
+      this.mainWindow = null;
+      app.quit();
     });
 
     this.mainWindow.on('resize', () => {
@@ -1029,9 +1030,9 @@ class VisualTodoApp {
       console.log('[Main] Page finished loading');
     });
 
-    this.mainWindow.on('close', (event) => {
-      event.preventDefault();
-      this.mainWindow?.hide();
+    this.mainWindow.on('close', () => {
+      this.mainWindow = null;
+      app.quit();
     });
 
     this.mainWindow.on('resize', () => {
