@@ -9,10 +9,11 @@ import Sidebar from './components/Sidebar';
 import TaskView from './components/TaskView';
 import UserProfileView from './components/UserProfileView';
 import SettingsView from './components/SettingsView';
+import CompletedTasksView from './components/CompletedTasksView';
 import ErrorBoundary from './components/ErrorBoundary';
 import HoverImageOverlay from './components/HoverImageOverlay';
 
-type View = 'tasks' | 'profile' | 'settings';
+type View = 'tasks' | 'profile' | 'settings' | 'completed';
 
 function App() {
   const location = useLocation();
@@ -24,7 +25,9 @@ function App() {
     ? 'profile'
     : currentPath.startsWith('/settings')
       ? 'settings'
-      : 'tasks';
+      : currentPath.startsWith('/completed')
+        ? 'completed'
+        : 'tasks';
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -53,7 +56,13 @@ function App() {
   };
 
   const handleViewChange = (view: View) => {
-    const path = view === 'tasks' ? '/tasks' : view === 'profile' ? '/profile' : '/settings';
+    const pathMap: Record<View, string> = {
+      tasks: '/tasks',
+      profile: '/profile',
+      settings: '/settings',
+      completed: '/completed',
+    };
+    const path = pathMap[view];
     if (location.pathname !== path) {
       navigate(path);
     }
@@ -90,6 +99,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Navigate to="/tasks" replace />} />
                     <Route path="/tasks" element={<TaskView />} />
+                    <Route path="/completed" element={<CompletedTasksView />} />
                     <Route path="/profile" element={<UserProfileView />} />
                     <Route path="/settings" element={<SettingsView />} />
                   </Routes>

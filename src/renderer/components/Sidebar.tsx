@@ -4,12 +4,13 @@ import {
   User, 
   Settings, 
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  Trophy
 } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
-  onViewChange: (view: 'tasks' | 'profile' | 'settings') => void;
+  onViewChange: (view: 'tasks' | 'profile' | 'settings' | 'completed') => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -17,6 +18,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isCollapsed, onToggleCollapse }) => {
   const menuItems = [
     { id: 'tasks', label: 'タスク', icon: CheckSquare },
+    { id: 'completed', label: '達成ギャラリー', icon: Trophy },
     { id: 'profile', label: 'プロファイル', icon: User },
     { id: 'settings', label: '設定', icon: Settings },
   ];
@@ -48,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isCollapse
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => onViewChange(item.id as 'tasks' | 'profile' | 'settings')}
+                  onClick={() => onViewChange(item.id as 'tasks' | 'profile' | 'settings' | 'completed')}
                   className={`w-full flex items-center ${isCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'} rounded-lg text-left transition-colors duration-200 ${
                     isActive
                       ? 'bg-primary-50 text-primary-700 border border-primary-200'
