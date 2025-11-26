@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
     },
   },
   build: {
-    outDir: './dist/renderer',
+    outDir: '../../dist/renderer',
     emptyOutDir: true,
     rollupOptions: {
       input: {
