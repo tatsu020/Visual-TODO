@@ -1,6 +1,6 @@
 {
   "name": "visual-todo-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AIイラスト付きタスク管理アプリ - AI-powered task management app with personalized illustrations",
   "main": "dist/src/main/main.js",
   "homepage": "./",
