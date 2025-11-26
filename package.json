@@ -88,12 +88,9 @@
     "nsis": {
       "oneClick": false,
       "allowElevation": true,
-      "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "allowToChangeInstallationDirectory": true
     },
-    "portable": {
-      "artifactName": "${productName}-Portable-${version}.${ext}"
-    },
+    "portable": {},
     "publish": [
       {
         "provider": "github",
