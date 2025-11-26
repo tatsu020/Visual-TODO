@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, AlertCircle, AlignLeft } from 'lucide-react';
 import { useTask } from '../contexts/TaskContext';
+import { useHoverImage } from '../contexts/HoverImageContext';
 import { TaskFormData } from '../types';
 
 interface TaskFormProps {
@@ -12,12 +13,18 @@ interface TaskFormProps {
 
 const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData, taskId }) => {
   const { createTask, updateTask } = useTask();
+  const { hideHoverImage } = useHoverImage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageProgress, setImageProgress] = useState<{
     stage: string;
     percent: number;
     message: string;
   } | null>(null);
+
+  // モーダルが開いたときにホバー画像を非表示にする
+  useEffect(() => {
+    hideHoverImage();
+  }, [hideHoverImage]);
 
   const [formData, setFormData] = useState<TaskFormData>({
     title: initialData?.title || '',
@@ -78,7 +85,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, initialData, ta
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 1000000 }}>
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-secondary-200">
           <h2 className="text-xl font-bold text-secondary-900">新しいタスク</h2>

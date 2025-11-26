@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, CheckSquare } from 'lucide-react';
 import { useTask } from '../contexts/TaskContext';
 import { Task } from '../types';
@@ -6,16 +6,76 @@ import TaskList from './TaskList';
 import TaskForm from './TaskForm';
 import NowCard from './NowCard';
 
+const NOW_TASK_ID_KEY = 'nowTaskId';
+
 const TaskView: React.FC = () => {
-  const { tasks, loading, error, updateTask } = useTask();
+  const { tasks, loading, error, updateTask, deleteTask } = useTask();
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // "NOW" task state
-  const [nowTaskId, setNowTaskId] = useState<number | null>(null);
+  // "NOW" task state - persisted to settings
+  const [nowTaskId, setNowTaskIdState] = useState<number | null>(null);
+  const [nowTaskIdLoaded, setNowTaskIdLoaded] = useState(false);
+
+  // Load nowTaskId from settings on mount
+  useEffect(() => {
+    const loadNowTaskId = async () => {
+      try {
+        const result = await window.electronAPI.settings.getMany([NOW_TASK_ID_KEY]);
+        if (result.success && result.values) {
+          const savedId = result.values[NOW_TASK_ID_KEY];
+          if (savedId) {
+            const parsedId = parseInt(savedId, 10);
+            if (!isNaN(parsedId)) {
+              setNowTaskIdState(parsedId);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load nowTaskId from settings:', err);
+      } finally {
+        setNowTaskIdLoaded(true);
+      }
+    };
+    loadNowTaskId();
+  }, []);
+
+  // Persist nowTaskId to settings when it changes (with broadcast to widget)
+  const setNowTaskId = useCallback(async (id: number | null) => {
+    setNowTaskIdState(id);
+    try {
+      // 新しいIPCを使用してnowTaskIdを設定し、ウィジェットに通知
+      await window.electronAPI.nowTask.setNowTaskId(id);
+    } catch (err) {
+      console.error('Failed to save nowTaskId to settings:', err);
+      // フォールバック: 直接settings APIを使用
+      try {
+        if (id === null) {
+          await window.electronAPI.settings.setMany({ [NOW_TASK_ID_KEY]: '' });
+        } else {
+          await window.electronAPI.settings.setMany({ [NOW_TASK_ID_KEY]: String(id) });
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+      }
+    }
+  }, []);
 
   // Derive the current NOW task object
   const nowTask = tasks.find(t => t.id === nowTaskId) || null;
+
+  // Clear nowTaskId if the task no longer exists or is completed
+  useEffect(() => {
+    if (!nowTaskIdLoaded || !tasks.length) return;
+    
+    if (nowTaskId !== null) {
+      const task = tasks.find(t => t.id === nowTaskId);
+      // If task doesn't exist or is already completed, clear the nowTaskId
+      if (!task || task.status === 'completed') {
+        setNowTaskId(null);
+      }
+    }
+  }, [nowTaskId, tasks, nowTaskIdLoaded, setNowTaskId]);
 
   // Filter out the NOW task and completed tasks from the list
   const listTasks = tasks.filter(t => t.id !== nowTaskId && t.status !== 'completed');
@@ -38,6 +98,16 @@ const TaskView: React.FC = () => {
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setShowForm(true);
+  };
+
+  const handleDeleteTask = async (task: Task) => {
+    if (task.id && window.confirm(`「${task.title}」を削除しますか？`)) {
+      try {
+        await deleteTask(task.id);
+      } catch (err) {
+        console.error('Failed to delete task:', err);
+      }
+    }
   };
 
   const handleCloseForm = () => {
@@ -93,6 +163,7 @@ const TaskView: React.FC = () => {
               <NowCard
                 task={nowTask}
                 onComplete={handleCompleteNowTask}
+                onTaskDrop={(taskId) => setNowTaskId(taskId)}
               />
             </div>
           </div>
@@ -107,6 +178,7 @@ const TaskView: React.FC = () => {
                 tasks={listTasks}
                 onTaskSelect={handleTaskSelect}
                 onTaskEdit={handleEditTask}
+                onTaskDelete={handleDeleteTask}
               />
             </div>
           </div>

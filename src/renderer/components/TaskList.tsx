@@ -6,9 +6,10 @@ interface TaskListProps {
   tasks: Task[];
   onTaskSelect: (task: Task) => void;
   onTaskEdit: (task: Task) => void;
+  onTaskDelete: (task: Task) => void;
 }
 
-const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskSelect, onTaskEdit }) => {
+const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskSelect, onTaskEdit, onTaskDelete }) => {
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
       // 1. Priority
@@ -44,13 +45,14 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskSelect, onTaskEdit }) 
   }
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
       {sortedTasks.map(task => (
         <SmallTaskCard
           key={task.id}
           task={task}
           onSelect={onTaskSelect}
           onEdit={onTaskEdit}
+          onDelete={onTaskDelete}
         />
       ))}
     </div>

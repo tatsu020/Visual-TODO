@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Clock, CheckCircle, SkipForward, Image as ImageIcon } from 'lucide-react';
+import { Clock, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { Task } from './types';
 import './index.css';
+
+const NOW_TASK_ID_KEY = 'nowTaskId';
 
 interface WidgetState {
   loading: boolean;
@@ -16,7 +18,7 @@ const Widget: React.FC = () => {
   });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const wheelLockRef = useRef<boolean>(false);
+  const [nowTaskId, setNowTaskId] = useState<number | null>(null);
   // ステップ進捗（フックは常にトップレベルで宣言）
   const [stepInfo, setStepInfo] = useState<{completed: number; total: number}>({completed: 0, total: 0});
   const [nextStepTitle, setNextStepTitle] = useState<string | null>(null);
@@ -34,18 +36,49 @@ const Widget: React.FC = () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // 進行中タスクを優先的に取得。なければ保留中タスクをフォールバック
-      let rowsResponse = await window.electronAPI.tasks.list({ status: 'inProgress', orderByPriority: true });
-      let rows = rowsResponse?.success && Array.isArray(rowsResponse.tasks) ? rowsResponse.tasks as Task[] : [];
-      if (!rows || rows.length === 0) {
-        const pending = await window.electronAPI.tasks.list({ status: 'pending', orderByPriority: true });
-        rows = pending?.success && Array.isArray(pending.tasks) ? pending.tasks as Task[] : [];
+      // NOWタスクIDを設定から読み込む
+      let currentNowTaskId: number | null = null;
+      try {
+        const settingsResult = await window.electronAPI.settings.getMany([NOW_TASK_ID_KEY]);
+        if (settingsResult?.success && settingsResult.values) {
+          const savedId = settingsResult.values[NOW_TASK_ID_KEY];
+          if (savedId) {
+            const parsedId = parseInt(savedId, 10);
+            if (!isNaN(parsedId)) {
+              currentNowTaskId = parsedId;
+              setNowTaskId(parsedId);
+            }
+          } else {
+            setNowTaskId(null);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load nowTaskId:', err);
       }
-      setTasks(rows || []);
-      setCurrentIndex(prev => {
-        const maxIdx = Math.max(0, (rows?.length || 1) - 1);
-        return Math.min(prev, maxIdx);
-      });
+
+      // NOWタスクのみを表示
+      if (currentNowTaskId) {
+        // 全タスクを取得してNOWタスクを探す
+        const allTasksResponse = await window.electronAPI.tasks.list({ orderByPriority: true });
+        const allTasks = allTasksResponse?.success && Array.isArray(allTasksResponse.tasks) 
+          ? allTasksResponse.tasks as Task[] 
+          : [];
+        
+        const nowTask = allTasks.find(t => t.id === currentNowTaskId && t.status !== 'completed');
+        
+        if (nowTask) {
+          setTasks([nowTask]);
+          setCurrentIndex(0);
+        } else {
+          // NOWタスクが見つからない（削除されたか完了済み）
+          setTasks([]);
+          setNowTaskId(null);
+        }
+      } else {
+        // NOWタスクが設定されていない場合は空
+        setTasks([]);
+      }
+      
       setState(prev => ({ ...prev, loading: false }));
     } catch (error) {
       console.error('Failed to load task:', error);
@@ -60,16 +93,24 @@ const Widget: React.FC = () => {
   const setupEventListeners = () => {
     if (window.electronAPI) {
       window.electronAPI.on('task:updated', handleTaskUpdated);
+      window.electronAPI.on('now:updated', handleNowUpdated);
     }
   };
 
   const cleanupEventListeners = () => {
     if (window.electronAPI) {
       window.electronAPI.removeAllListeners('task:updated');
+      window.electronAPI.removeAllListeners('now:updated');
     }
   };
 
   const handleTaskUpdated = () => {
+    loadTasks();
+  };
+
+  const handleNowUpdated = (newNowTaskId: number | null) => {
+    console.log('[Widget] Now task updated:', newNowTaskId);
+    setNowTaskId(newNowTaskId);
     loadTasks();
   };
 
@@ -82,34 +123,22 @@ const Widget: React.FC = () => {
         task.id,
         { status: 'completed', completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
       );
+      
+      // 完了したタスクがNOWタスクだった場合、nowTaskIdをクリア
+      if (nowTaskId && task.id === nowTaskId) {
+        try {
+          await window.electronAPI.settings.setMany({ [NOW_TASK_ID_KEY]: '' });
+          setNowTaskId(null);
+        } catch (err) {
+          console.warn('Failed to clear nowTaskId:', err);
+        }
+      }
+      
       // 完了後は最新の進行中/保留タスクを再読込
       await loadTasks();
     } catch (error) {
       console.error('Failed to complete task:', error);
     }
-  };
-
-  const skipCurrentTask = () => {
-    if (tasks.length === 0) return;
-    setCurrentIndex((idx) => (idx + 1) % tasks.length);
-  };
-
-  // ホイールで前後に切り替え（200msスロットル）
-  const handleWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
-    e.stopPropagation();
-    if (tasks.length <= 1) return;
-    if (wheelLockRef.current) return;
-    wheelLockRef.current = true;
-    setTimeout(() => (wheelLockRef.current = false), 200);
-    if (e.deltaY > 0) {
-      setCurrentIndex((idx) => (idx + 1) % tasks.length);
-    } else if (e.deltaY < 0) {
-      setCurrentIndex((idx) => (idx - 1 + tasks.length) % tasks.length);
-    }
-  };
-
-  const openMainWindow = () => {
-    // ボタンは非ドラッグ領域
   };
 
   const formatTime = (minutes: number): string => {
@@ -185,14 +214,9 @@ const Widget: React.FC = () => {
   if (!currentTask) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-4">
-        <div className="text-2xl mb-2">📝</div>
-        <div className="text-sm text-secondary-600 mb-3">タスクがありません</div>
-        <button
-          onClick={openMainWindow}
-          className="text-xs px-3 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
-        >
-          タスクを作成
-        </button>
+        <div className="text-2xl mb-2">🎯</div>
+        <div className="text-sm text-secondary-600 mb-1">NOWカードが設定されていません</div>
+        <div className="text-xs text-secondary-400">メインウィンドウでタスクをダブルクリックして設定してください</div>
       </div>
     );
   }
@@ -200,9 +224,19 @@ const Widget: React.FC = () => {
   // （重複削除）ステップ進捗のフックはトップレベルで定義済み、更新は別の useEffect で実行
 
   return (
-    <div className="h-full w-full flex flex-col widget-content" onWheel={handleWheel}>
-      <div className="flex items-start space-x-2.5">
-        <div className="w-[126px] h-[126px] bg-secondary-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 task-image">
+    <div className="h-full w-full flex flex-col widget-content relative">
+      {/* NOW バッジ */}
+      <div className="absolute top-1 left-1 z-10">
+        <div className="flex items-center gap-1 bg-red-500 text-white px-2 py-0.5 rounded-full font-bold text-[10px] shadow">
+          <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+          NOW
+        </div>
+      </div>
+      
+      {/* メインコンテンツ */}
+      <div className="flex-1 flex items-start gap-2 pt-7 px-1">
+        {/* 画像 */}
+        <div className="w-20 h-20 bg-secondary-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
           {currentTask.imageUrl ? (
             <img 
               src={currentTask.imageUrl}
@@ -210,27 +244,28 @@ const Widget: React.FC = () => {
               className="w-full h-full object-cover"
             />
           ) : (
-            <ImageIcon className="w-7 h-7 text-secondary-400" />
+            <ImageIcon className="w-6 h-6 text-secondary-400" />
           )}
         </div>
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between mb-0.5">
-            <h3 className="text-[12px] font-semibold text-secondary-900 leading-tight line-clamp-2">
+        {/* タスク情報 */}
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className="flex items-start justify-between mb-1">
+            <h3 className="text-[11px] font-semibold text-secondary-900 leading-tight line-clamp-2 pr-1">
               {currentTask.title}
             </h3>
             <div 
-              className="w-2 h-2 rounded-full flex-shrink-0 ml-2 mt-0.5"
+              className="w-2 h-2 rounded-full flex-shrink-0"
               style={{ backgroundColor: getPriorityColor((currentTask as any).priority || 'low') }}
             />
           </div>
           
           <div className="text-[10px] text-secondary-600 space-y-0.5">
             {nextStepTitle && (
-              <div className="truncate" title={nextStepTitle}>次のステップ: {nextStepTitle}</div>
+              <div className="truncate" title={nextStepTitle}>次: {nextStepTitle}</div>
             )}
             {currentTask.estimatedDuration && (
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center gap-1">
                 <Clock className="w-[10px] h-[10px]" />
                 <span>{formatTime(currentTask.estimatedDuration)}</span>
               </div>
@@ -238,31 +273,23 @@ const Widget: React.FC = () => {
             {stepInfo.total > 0 && (
               <div className="steps">
                 <div className="bar"><div style={{ width: `${Math.round((stepInfo.completed/stepInfo.total)*100)}%` }} /></div>
-                <div className="mt-0.5 text-[10px] text-secondary-500">{stepInfo.completed}/{stepInfo.total} 完了</div>
+                <div className="mt-0.5 text-[9px] text-secondary-500">{stepInfo.completed}/{stepInfo.total} 完了</div>
               </div>
             )}
           </div>
         </div>
       </div>
       
-      <div className="flex space-x-1.5 mt-1 pb-0">
+      {/* 完了ボタン */}
+      <div className="px-1 pb-1">
         <button
           onClick={completeCurrentTask}
-          className="flex-1 flex items-center justify-center space-x-1 px-1.5 py-1 bg-green-500 text-white text-[10px] rounded hover:bg-green-600 transition-colors"
+          className="w-full flex items-center justify-center gap-1 py-1.5 bg-green-500 text-white text-[10px] font-medium rounded hover:bg-green-600 transition-colors"
         >
-          <CheckCircle className="w-[11px] h-[11px]" />
+          <CheckCircle className="w-3 h-3" />
           <span>完了</span>
         </button>
-        <button
-          onClick={skipCurrentTask}
-          className="flex-1 flex items-center justify-center space-x-1 px-1.5 py-1 bg-secondary-200 text-secondary-700 text-[10px] rounded hover:bg-secondary-300 transition-colors"
-        >
-          <SkipForward className="w-[11px] h-[11px]" />
-          <span>次へ</span>
-        </button>
       </div>
-      
-      {/* サイズ調整ボタンは削除。ウィンドウ端ドラッグでリサイズ可能 */}
     </div>
   );
 };

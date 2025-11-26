@@ -68,9 +68,15 @@ export const ApiKeySchema = z.string()
   .min(20, 'APIキーは20文字以上である必要があります')
   .max(200, 'APIキーは200文字以内である必要があります');
 
+// APIキーのオプショナルスキーマ（空文字列も許可）
+const OptionalApiKeySchema = z.union([
+  z.literal(''),
+  ApiKeySchema
+]).optional().transform(val => val === '' ? undefined : val);
+
 // 設定関連のスキーマ
 export const SettingsSchema = z.object({
-  geminiApiKey: ApiKeySchema.optional(),
+  geminiApiKey: OptionalApiKeySchema,
   notificationsEnabled: z.boolean(),
   notificationSound: z.boolean(),
   notificationVolume: z.number().min(0).max(100),
@@ -79,7 +85,7 @@ export const SettingsSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']),
   language: z.enum(['ja', 'en']),
   fontSize: z.enum(['small', 'medium', 'large']),
-  openaiApiKey: ApiKeySchema.optional(),
+  openaiApiKey: OptionalApiKeySchema,
   imageProvider: z.enum(['gemini', 'openai']).optional()
 });
 

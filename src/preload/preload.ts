@@ -116,6 +116,12 @@ const electronAPI = {
     setMany: (entries: Record<string, string>) => ipcRenderer.invoke('settings:setMany', entries)
   },
 
+  // Now Task operations
+  nowTask: {
+    setNowTaskId: (taskId: number | null) =>
+      ipcRenderer.invoke('nowTask:setNowTaskId', taskId)
+  },
+
   // Event listeners
   on: (channel: string, callback: Function) => {
     const validChannels = [
@@ -123,6 +129,7 @@ const electronAPI = {
       'widget:completeTask',
       'widget:skipTask',
       'task:updated',
+      'now:updated',
       'notification:clicked',
       'ai:image-progress'
     ];
@@ -139,6 +146,7 @@ const electronAPI = {
       'widget:completeTask',
       'widget:skipTask',
       'task:updated',
+      'now:updated',
       'notification:clicked',
       'ai:image-progress'
     ];

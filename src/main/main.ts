@@ -500,6 +500,23 @@ class VisualTodoApp {
       }
     });
 
+    // NOW Task ID の設定とブロードキャスト
+    ipcMain.handle('nowTask:setNowTaskId', async (_evt, taskId: number | null) => {
+      try {
+        if (taskId === null) {
+          await this.database.setSettings({ nowTaskId: '' });
+        } else {
+          await this.database.setSettings({ nowTaskId: String(taskId) });
+        }
+        // 全ウィンドウに通知
+        this.broadcast('now:updated', taskId);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to set nowTaskId:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    });
+
     ipcMain.handle('dialog:openFile', async (_, filters?: Electron.FileFilter[]) => {
       const result = await dialog.showOpenDialog(this.mainWindow!, {
         properties: ['openFile'],

@@ -154,6 +154,9 @@ declare global {
         getMany: (keys: string[]) => Promise<{ success: boolean; values?: Record<string, string | null>; error?: string }>;
         setMany: (entries: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
       };
+      nowTask: {
+        setNowTaskId: (taskId: number | null) => Promise<{ success: boolean; error?: string }>;
+      };
       taskSteps?: {
         getByTaskId: (taskId: number) => Promise<{ success: boolean; steps: any[] }>;
         create: (step: any) => Promise<{ success: boolean; error?: string }>;
