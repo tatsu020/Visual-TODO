@@ -29,9 +29,6 @@ jobs:
           choco install windows-sdk-10-version-2004-all
         shell: powershell
 
-      - name: Set msvs_version
-        run: npm config set msvs_version 2022
-
       - name: Install dependencies
         run: npm ci
 
