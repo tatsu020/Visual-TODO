@@ -71,7 +71,6 @@
   "build": {
     "appId": "com.visualtodo.app",
     "productName": "Visual TODO App",
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "release"
     },
@@ -88,9 +87,12 @@
     "nsis": {
       "oneClick": false,
       "allowElevation": true,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
-    "portable": {},
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
+    },
     "publish": [
       {
         "provider": "github",
