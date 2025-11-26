@@ -30,9 +30,7 @@ jobs:
         run: npm run build
 
       - name: Package for Windows
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win
+        run: npx electron-builder --win --publish=never
 
       - name: List built files
         run: Get-ChildItem -Path release -Recurse | Select-Object FullName, Length

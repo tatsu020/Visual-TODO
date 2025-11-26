@@ -94,7 +94,7 @@ export async function createWidget(appContext: any): Promise<BrowserWindow> {
       widget.loadURL(`data:text/html;charset=UTF-8,${html}`);
     }
   } else {
-    widget.loadFile(join(__dirname, '../renderer/widget.html'));
+    widget.loadFile(join(__dirname, '../../renderer/widget.html'));
   }
 
   // 描画準備後に確実に表示 & 最前面
